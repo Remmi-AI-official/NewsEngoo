@@ -122,8 +122,14 @@ jobs:
       - name: Organize Output APK
         run: |
           mkdir -p build-artifacts
-          find app/build/outputs/apk/release/ -name "*.apk" -exec cp {} build-artifacts/EditorialEnglish-release.apk \;
-          echo "Release APK generated successfully:"
+          APK_FILE=$(find . -type f \( -path "*/outputs/apk/release/*" -o -path "*/outputs/apk/*" \) -name "*.apk" ! -name "*unaligned*" | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            cp "$APK_FILE" build-artifacts/EditorialEnglish-release.apk
+            echo "Release APK copied from $APK_FILE to build-artifacts/EditorialEnglish-release.apk"
+          else
+            echo "Fallback searching all APKs..."
+            find . -type f -name "*.apk" -exec cp {} build-artifacts/EditorialEnglish-release.apk \; || true
+          fi
           ls -lh build-artifacts/
 
       - name: Upload Release APK Artifact

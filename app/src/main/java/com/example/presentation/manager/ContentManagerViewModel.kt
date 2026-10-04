@@ -4,7 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.EditorialApplication
+import com.example.data.local.entity.EditorialEntity
+import com.example.data.local.entity.GrammarRuleEntity
 import com.example.data.local.entity.ImportHistoryEntity
+import com.example.data.local.entity.PhraseEntity
+import com.example.data.local.entity.TestEntity
+import com.example.data.local.entity.VocabularyEntity
 import com.example.domain.model.ContentParser
 import com.example.domain.model.DailyPackageImport
 import com.example.domain.model.DateUtils
@@ -62,6 +67,21 @@ class ContentManagerViewModel(application: Application) : AndroidViewModel(appli
 
     private val _uiState = MutableStateFlow(ContentManagerUiState())
     val uiState: StateFlow<ContentManagerUiState> = _uiState.asStateFlow()
+
+    val allEditorials: StateFlow<List<EditorialEntity>> = app.editorialRepository.getAllEditorials()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allVocabWords: StateFlow<List<VocabularyEntity>> = app.vocabularyRepository.getAllWords()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allGrammarRules: StateFlow<List<GrammarRuleEntity>> = app.grammarRepository.getAllRules()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allPhrases: StateFlow<List<PhraseEntity>> = app.phraseRepository.getAllPhrases()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allTests: StateFlow<List<TestEntity>> = app.practiceTestRepository.getAllTests()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         loadHistory()
@@ -441,6 +461,102 @@ class ContentManagerViewModel(application: Application) : AndroidViewModel(appli
                 isProcessing = false,
                 exportedJsonString = json,
                 lastSuccessMessage = "Full backup JSON generated (${json.length} characters)."
+            )
+        }
+    }
+
+    fun deleteContentByDate(date: String) {
+        clearDateData(date)
+    }
+
+    fun deleteEditorial(id: String) {
+        viewModelScope.launch {
+            app.editorialRepository.deleteEditorial(id)
+            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Editorial deleted successfully.")
+        }
+    }
+
+    fun deleteWord(id: String) {
+        viewModelScope.launch {
+            app.vocabularyRepository.deleteWord(id)
+            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Word deleted from vocabulary.")
+        }
+    }
+
+    fun deleteGrammarRule(id: String) {
+        viewModelScope.launch {
+            app.grammarRepository.deleteRule(id)
+            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Grammar rule deleted.")
+        }
+    }
+
+    fun deletePhrase(id: String) {
+        viewModelScope.launch {
+            app.phraseRepository.deletePhrase(id)
+            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Phrase deleted.")
+        }
+    }
+
+    fun deleteTest(id: String) {
+        viewModelScope.launch {
+            app.practiceTestRepository.deleteTest(id)
+            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Practice test deleted.")
+        }
+    }
+
+    fun clearAllEditorials() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isProcessing = true)
+            app.database.editorialDao().clearAll()
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                lastSuccessMessage = "All editorials cleared from database."
+            )
+        }
+    }
+
+    fun clearAllVocabulary() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isProcessing = true)
+            app.database.vocabularyDao().clearAll()
+            app.database.vocabularyDao().clearAllCategoryRefs()
+            app.database.vocabularyDao().clearAllEditorialRefs()
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                lastSuccessMessage = "All vocabulary words cleared."
+            )
+        }
+    }
+
+    fun clearAllGrammar() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isProcessing = true)
+            app.database.grammarDao().clearAll()
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                lastSuccessMessage = "All grammar rules cleared."
+            )
+        }
+    }
+
+    fun clearAllPhrases() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isProcessing = true)
+            app.database.phraseDao().clearAll()
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                lastSuccessMessage = "All phrases & idioms cleared."
+            )
+        }
+    }
+
+    fun clearAllTests() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isProcessing = true)
+            app.practiceTestRepository.clearAllTests()
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                lastSuccessMessage = "All tests and question banks cleared."
             )
         }
     }

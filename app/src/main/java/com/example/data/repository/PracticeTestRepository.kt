@@ -81,6 +81,12 @@ class PracticeTestRepository(
 
     suspend fun deleteTestsForDate(date: String) = testDao.deleteTestsForDate(date)
 
+    suspend fun clearAllTests() {
+        testDao.clearAllTests()
+        testDao.clearAllQuestions()
+        testDao.clearAllTestCrossRefs()
+    }
+
     suspend fun updateTest(test: TestEntity) = testDao.updateTest(test)
 
     fun getFavoriteQuestions(): Flow<List<QuestionEntity>> = testDao.getFavoriteQuestions()

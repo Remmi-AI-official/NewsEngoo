@@ -52,6 +52,15 @@ interface PracticeTestDao {
     @Query("DELETE FROM tests WHERE date = :date")
     suspend fun deleteTestsForDate(date: String)
 
+    @Query("DELETE FROM tests")
+    suspend fun clearAllTests()
+
+    @Query("DELETE FROM questions")
+    suspend fun clearAllQuestions()
+
+    @Query("DELETE FROM test_question_cross_ref")
+    suspend fun clearAllTestCrossRefs()
+
     @Update
     suspend fun updateTest(test: TestEntity)
 

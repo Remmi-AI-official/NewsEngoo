@@ -173,4 +173,13 @@ interface VocabularyDao {
 
     @Query("SELECT COUNT(*) FROM vocabulary_words WHERE learningStatus = 'MASTERED'")
     fun getMasteredWordsCount(): Flow<Int>
+
+    @Query("DELETE FROM vocabulary_words")
+    suspend fun clearAll()
+
+    @Query("DELETE FROM word_category_cross_ref")
+    suspend fun clearAllCategoryRefs()
+
+    @Query("DELETE FROM editorial_vocabulary_cross_ref")
+    suspend fun clearAllEditorialRefs()
 }

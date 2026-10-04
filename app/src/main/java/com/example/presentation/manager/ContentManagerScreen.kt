@@ -770,7 +770,7 @@ fun ManageDeleteTabContent(
                     val filteredEd = editorials.filter { q.isEmpty() || it.title.lowercase().contains(q) || it.date.contains(q) }
                     if (filteredEd.isNotEmpty()) {
                         Text("Editorials (${filteredEd.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        filteredEd.take(15).forEach { ed ->
+                        for (ed in filteredEd.take(15)) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
@@ -806,7 +806,7 @@ fun ManageDeleteTabContent(
                     val filteredWords = words.filter { q.isEmpty() || it.word.lowercase().contains(q) || it.meaning.lowercase().contains(q) }
                     if (filteredWords.isNotEmpty()) {
                         Text("Vocabulary (${filteredWords.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        filteredWords.take(15).forEach { w ->
+                        for (w in filteredWords.take(15)) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
@@ -845,7 +845,7 @@ fun ManageDeleteTabContent(
                     val filteredRules = rules.filter { q.isEmpty() || it.title.lowercase().contains(q) || it.rule.lowercase().contains(q) }
                     if (filteredRules.isNotEmpty()) {
                         Text("Grammar Rules (${filteredRules.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        filteredRules.take(15).forEach { r ->
+                        for (r in filteredRules.take(15)) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
@@ -881,7 +881,7 @@ fun ManageDeleteTabContent(
                     val filteredPhrases = phrases.filter { q.isEmpty() || it.phrase.lowercase().contains(q) || it.meaning.lowercase().contains(q) }
                     if (filteredPhrases.isNotEmpty()) {
                         Text("Phrases & Idioms (${filteredPhrases.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        filteredPhrases.take(15).forEach { p ->
+                        for (p in filteredPhrases.take(15)) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
@@ -917,7 +917,7 @@ fun ManageDeleteTabContent(
                     val filteredTests = tests.filter { q.isEmpty() || it.title.lowercase().contains(q) || it.date.contains(q) }
                     if (filteredTests.isNotEmpty()) {
                         Text("Practice Tests (${filteredTests.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        filteredTests.take(15).forEach { t ->
+                        for (t in filteredTests.take(15)) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))

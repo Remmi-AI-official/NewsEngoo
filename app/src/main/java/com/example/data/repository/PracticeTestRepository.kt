@@ -81,11 +81,9 @@ class PracticeTestRepository(
 
     suspend fun deleteTestsForDate(date: String) = testDao.deleteTestsForDate(date)
 
-    suspend fun clearAllTests() {
-        testDao.clearAllTests()
-        testDao.clearAllQuestions()
-        testDao.clearAllTestCrossRefs()
-    }
+    suspend fun clearAllTests() = testDao.clearAllTests()
+
+    suspend fun clearAllQuestions() = testDao.clearAllQuestions()
 
     suspend fun updateTest(test: TestEntity) = testDao.updateTest(test)
 

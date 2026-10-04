@@ -1,7 +1,9 @@
 package com.example.presentation.archive
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,7 +79,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarArchiveScreen(
     onNavigateToReader: (String) -> Unit,
@@ -315,7 +317,7 @@ fun CalendarViewContent(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.Top
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     text = summary.editorial.title,
                                     style = MaterialTheme.typography.titleMedium.copy(
@@ -329,16 +331,6 @@ fun CalendarViewContent(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(top = 2.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = { onDeleteEditorial(summary.editorial) },
-                                modifier = Modifier.size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DeleteOutline,
-                                    contentDescription = "Delete Editorial",
-                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                                 )
                             }
                         }
@@ -399,6 +391,7 @@ fun CalendarViewContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ListViewContent(
     uiState: ArchiveUiState,
@@ -449,7 +442,10 @@ fun ListViewContent(
                     ElevatedCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelectEditorial(ed) },
+                            .combinedClickable(
+                                onClick = { onSelectEditorial(ed) },
+                                onLongClick = { onDeleteEditorial(ed) }
+                            ),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
@@ -465,22 +461,8 @@ fun ListViewContent(
                                     color = MaterialTheme.colorScheme.secondary,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (ed.isFavorite) {
-                                        Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFE53E3E), modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                    }
-                                    IconButton(
-                                        onClick = { onDeleteEditorial(ed) },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.DeleteOutline,
-                                            contentDescription = "Delete",
-                                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
+                                if (ed.isFavorite) {
+                                    Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFE53E3E), modifier = Modifier.size(16.dp))
                                 }
                             }
                             Spacer(modifier = Modifier.height(4.dp))

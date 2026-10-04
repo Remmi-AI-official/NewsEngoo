@@ -119,6 +119,8 @@ class VocabularyRepository(private val vocabularyDao: VocabularyDao) {
 
     suspend fun deleteWord(wordId: String) = vocabularyDao.deleteWord(wordId)
 
+    suspend fun clearAll() = vocabularyDao.clearAll()
+
     suspend fun unlinkWordsForDate(date: String) = vocabularyDao.unlinkWordsForDate(date)
 
     suspend fun unlinkWordsForEditorial(editorialId: String) = vocabularyDao.unlinkWordsForEditorial(editorialId)

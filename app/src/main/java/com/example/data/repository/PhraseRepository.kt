@@ -26,6 +26,8 @@ class PhraseRepository(private val phraseDao: PhraseDao) {
 
     suspend fun deletePhrasesForDate(date: String) = phraseDao.deletePhrasesForDate(date)
 
+    suspend fun clearAll() = phraseDao.clearAll()
+
     fun getFavoritePhrases(): Flow<List<PhraseEntity>> = phraseDao.getFavoritePhrases()
 
     fun searchPhrases(query: String): Flow<List<PhraseEntity>> = phraseDao.searchPhrases(query)

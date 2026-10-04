@@ -35,6 +35,9 @@ interface GrammarDao {
     @Query("DELETE FROM grammar_rules WHERE date = :date")
     suspend fun deleteRulesForDate(date: String)
 
+    @Query("DELETE FROM grammar_rules")
+    suspend fun clearAll()
+
     @Query("UPDATE grammar_rules SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(id: String, isFavorite: Boolean)
 
@@ -49,9 +52,6 @@ interface GrammarDao {
 
     @Query("SELECT * FROM grammar_rules WHERE title LIKE '%' || :query || '%' OR rule LIKE '%' || :query || '%'")
     fun searchRules(query: String): Flow<List<GrammarRuleEntity>>
-
-    @Query("DELETE FROM grammar_rules")
-    suspend fun clearAll()
 }
 
 @Dao
@@ -80,6 +80,9 @@ interface PhraseDao {
     @Query("DELETE FROM phrases_expressions WHERE date = :date")
     suspend fun deletePhrasesForDate(date: String)
 
+    @Query("DELETE FROM phrases_expressions")
+    suspend fun clearAll()
+
     @Query("UPDATE phrases_expressions SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(id: String, isFavorite: Boolean)
 
@@ -94,7 +97,4 @@ interface PhraseDao {
 
     @Query("SELECT * FROM phrases_expressions WHERE phrase LIKE '%' || :query || '%' OR meaning LIKE '%' || :query || '%'")
     fun searchPhrases(query: String): Flow<List<PhraseEntity>>
-
-    @Query("DELETE FROM phrases_expressions")
-    suspend fun clearAll()
 }

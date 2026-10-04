@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -33,6 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -125,6 +127,50 @@ fun PhraseScreen(
 
     var phraseToEdit by remember { mutableStateOf<PhraseEntity?>(null) }
     var phraseToDelete by remember { mutableStateOf<PhraseEntity?>(null) }
+    var phraseContextMenu by remember { mutableStateOf<PhraseEntity?>(null) }
+
+    phraseContextMenu?.let { phrase ->
+        AlertDialog(
+            onDismissRequest = { phraseContextMenu = null },
+            title = { Text("Expression Options", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(phrase.phrase, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                    Text(phrase.meaning, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    TextButton(
+                        onClick = {
+                            phraseToEdit = phrase
+                            phraseContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Edit Expression")
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            phraseToDelete = phrase
+                            phraseContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Delete Expression", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { phraseContextMenu = null }) { Text("Close") }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -198,7 +244,7 @@ fun PhraseScreen(
                                 .fillMaxWidth()
                                 .combinedClickable(
                                     onClick = {},
-                                    onLongClick = { phraseToEdit = item }
+                                    onLongClick = { phraseContextMenu = item }
                                 ),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -218,20 +264,12 @@ fun PhraseScreen(
                                         color = MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { phraseToEdit = item }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Default.Edit, contentDescription = "Edit Phrase", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                                        }
-                                        IconButton(onClick = { phraseToDelete = item }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Delete Phrase", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-                                        }
-                                        IconButton(onClick = { viewModel.toggleFavorite(item.id, !item.isFavorite) }, modifier = Modifier.size(32.dp)) {
-                                            Icon(
-                                                imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                                contentDescription = "Favorite",
-                                                tint = if (item.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
-                                            )
-                                        }
+                                    IconButton(onClick = { viewModel.toggleFavorite(item.id, !item.isFavorite) }, modifier = Modifier.size(32.dp)) {
+                                        Icon(
+                                            imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            contentDescription = "Favorite",
+                                            tint = if (item.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
+                                        )
                                     }
                                 }
 

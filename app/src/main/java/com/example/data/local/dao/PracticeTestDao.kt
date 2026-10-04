@@ -58,9 +58,6 @@ interface PracticeTestDao {
     @Query("DELETE FROM questions")
     suspend fun clearAllQuestions()
 
-    @Query("DELETE FROM test_question_cross_ref")
-    suspend fun clearAllTestCrossRefs()
-
     @Update
     suspend fun updateTest(test: TestEntity)
 

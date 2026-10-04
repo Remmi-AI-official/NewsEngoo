@@ -49,6 +49,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -96,6 +97,68 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showEditEditorialDialog by remember { mutableStateOf(false) }
     var showDeleteEditorialDialog by remember { mutableStateOf(false) }
+    var showEditorialContextMenu by remember { mutableStateOf(false) }
+
+    if (showEditorialContextMenu) {
+        val editorial = uiState.todayEditorial
+        if (editorial != null) {
+            AlertDialog(
+                onDismissRequest = { showEditorialContextMenu = false },
+                title = { Text("Editorial Options", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(editorial.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        Text("Source: ${editorial.source} • Date: ${editorial.date}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        TextButton(
+                            onClick = {
+                                showEditorialContextMenu = false
+                                onNavigateToReader(editorial.id)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Book, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Read Editorial")
+                            }
+                        }
+                        TextButton(
+                            onClick = {
+                                showEditorialContextMenu = false
+                                showEditEditorialDialog = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Edit Editorial")
+                            }
+                        }
+                        TextButton(
+                            onClick = {
+                                showEditorialContextMenu = false
+                                showDeleteEditorialDialog = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Delete Editorial", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showEditorialContextMenu = false }) {
+                        Text("Close")
+                    }
+                }
+            )
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -247,7 +310,7 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .combinedClickable(
                             onClick = { onNavigateToReader(editorial.id) },
-                            onLongClick = { showEditEditorialDialog = true }
+                            onLongClick = { showEditorialContextMenu = true }
                         )
                         .testTag("today_editorial_card"),
                     shape = RoundedCornerShape(16.dp),
@@ -274,20 +337,11 @@ fun HomeScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "${editorial.readTimeMinutes} min read",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                IconButton(onClick = { showEditEditorialDialog = true }, modifier = Modifier.size(28.dp)) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Edit Editorial", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                }
-                                IconButton(onClick = { showDeleteEditorialDialog = true }, modifier = Modifier.size(28.dp)) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete Editorial", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
-                                }
-                            }
+                            Text(
+                                text = "${editorial.readTimeMinutes} min read",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))

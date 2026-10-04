@@ -27,6 +27,8 @@ class GrammarRepository(private val grammarDao: GrammarDao) {
 
     suspend fun deleteRulesForDate(date: String) = grammarDao.deleteRulesForDate(date)
 
+    suspend fun clearAll() = grammarDao.clearAll()
+
     fun getFavoriteRules(): Flow<List<GrammarRuleEntity>> = grammarDao.getFavoriteRules()
 
     fun searchRules(query: String): Flow<List<GrammarRuleEntity>> = grammarDao.searchRules(query)

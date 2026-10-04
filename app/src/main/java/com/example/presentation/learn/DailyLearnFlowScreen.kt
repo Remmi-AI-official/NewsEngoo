@@ -35,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -88,18 +89,237 @@ fun DailyLearnFlowScreen(
     // Dialog state holders for Edit & Delete on Long-Press
     var editingEditorial by remember { mutableStateOf(false) }
     var deletingEditorial by remember { mutableStateOf(false) }
+    var editorialContextMenu by remember { mutableStateOf(false) }
 
     var wordToEdit by remember { mutableStateOf<VocabularyEntity?>(null) }
     var wordToDelete by remember { mutableStateOf<VocabularyEntity?>(null) }
+    var wordContextMenu by remember { mutableStateOf<VocabularyEntity?>(null) }
 
     var grammarToEdit by remember { mutableStateOf<GrammarRuleEntity?>(null) }
     var grammarToDelete by remember { mutableStateOf<GrammarRuleEntity?>(null) }
+    var grammarContextMenu by remember { mutableStateOf<GrammarRuleEntity?>(null) }
 
     var phraseToEdit by remember { mutableStateOf<PhraseEntity?>(null) }
     var phraseToDelete by remember { mutableStateOf<PhraseEntity?>(null) }
+    var phraseContextMenu by remember { mutableStateOf<PhraseEntity?>(null) }
 
     var questionToEdit by remember { mutableStateOf<QuestionEntity?>(null) }
     var questionToDelete by remember { mutableStateOf<QuestionEntity?>(null) }
+    var questionContextMenu by remember { mutableStateOf<QuestionEntity?>(null) }
+
+    if (editorialContextMenu && uiState.editorial != null) {
+        val ed = uiState.editorial!!
+        AlertDialog(
+            onDismissRequest = { editorialContextMenu = false },
+            title = { Text("Editorial Options", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(ed.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    TextButton(
+                        onClick = {
+                            editorialContextMenu = false
+                            editingEditorial = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Edit Editorial")
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            editorialContextMenu = false
+                            deletingEditorial = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Delete Editorial", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { editorialContextMenu = false }) { Text("Close") }
+            }
+        )
+    }
+
+    wordContextMenu?.let { w ->
+        AlertDialog(
+            onDismissRequest = { wordContextMenu = null },
+            title = { Text("Word Options", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(w.word, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("Meaning: ${w.meaning}", style = MaterialTheme.typography.bodySmall)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    TextButton(
+                        onClick = {
+                            wordToEdit = w
+                            wordContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Edit Word")
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            wordToDelete = w
+                            wordContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Delete Word", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { wordContextMenu = null }) { Text("Close") }
+            }
+        )
+    }
+
+    grammarContextMenu?.let { r ->
+        AlertDialog(
+            onDismissRequest = { grammarContextMenu = null },
+            title = { Text("Grammar Rule Options", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(r.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("Rule: ${r.rule}", style = MaterialTheme.typography.bodySmall)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    TextButton(
+                        onClick = {
+                            grammarToEdit = r
+                            grammarContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Edit Rule")
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            grammarToDelete = r
+                            grammarContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Delete Rule", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { grammarContextMenu = null }) { Text("Close") }
+            }
+        )
+    }
+
+    phraseContextMenu?.let { p ->
+        AlertDialog(
+            onDismissRequest = { phraseContextMenu = null },
+            title = { Text("Expression Options", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(p.phrase, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                    Text("Meaning: ${p.meaning}", style = MaterialTheme.typography.bodySmall)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    TextButton(
+                        onClick = {
+                            phraseToEdit = p
+                            phraseContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Edit Expression")
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            phraseToDelete = p
+                            phraseContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Delete Expression", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { phraseContextMenu = null }) { Text("Close") }
+            }
+        )
+    }
+
+    questionContextMenu?.let { q ->
+        AlertDialog(
+            onDismissRequest = { questionContextMenu = null },
+            title = { Text("Question Options", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(q.question, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    TextButton(
+                        onClick = {
+                            questionToEdit = q
+                            questionContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Edit Question")
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            questionToDelete = q
+                            questionContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Delete Question", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { questionContextMenu = null }) { Text("Close") }
+            }
+        )
+    }
 
     LaunchedEffect(date) {
         viewModel.loadDay(date)
@@ -191,36 +411,31 @@ fun DailyLearnFlowScreen(
                         uiState = uiState,
                         onOpenReader = { onNavigateToReader(uiState.editorial?.id ?: "ed_$date") },
                         onNext = { viewModel.setStep(LearnStep.VOCABULARY) },
-                        onEditEditorial = { editingEditorial = true },
-                        onDeleteEditorial = { deletingEditorial = true }
+                        onOpenContextMenu = { editorialContextMenu = true }
                     )
                     LearnStep.VOCABULARY -> StepVocabulary(
                         uiState = uiState,
                         onNextVocab = { viewModel.nextVocab() },
                         onPrevVocab = { viewModel.prevVocab() },
                         onMarkReviewed = { id, remembered -> viewModel.markWordReviewed(id, remembered) },
-                        onEditWord = { wordToEdit = it },
-                        onDeleteWord = { wordToDelete = it }
+                        onOpenContextMenu = { wordContextMenu = it }
                     )
                     LearnStep.GRAMMAR -> StepGrammar(
                         uiState = uiState,
                         onNextRule = { viewModel.nextGrammar() },
-                        onEditGrammar = { grammarToEdit = it },
-                        onDeleteGrammar = { grammarToDelete = it }
+                        onOpenContextMenu = { grammarContextMenu = it }
                     )
                     LearnStep.EXPRESSIONS -> StepExpressions(
                         uiState = uiState,
                         onNextPhrase = { viewModel.nextPhrase() },
-                        onEditPhrase = { phraseToEdit = it },
-                        onDeletePhrase = { phraseToDelete = it }
+                        onOpenContextMenu = { phraseContextMenu = it }
                     )
                     LearnStep.PRACTICE -> StepPractice(
                         uiState = uiState,
                         onSelectAnswer = { qId, ans -> viewModel.selectPracticeAnswer(qId, ans) },
                         onSubmit = { viewModel.submitPractice() },
                         onProceedToTest = { viewModel.setStep(LearnStep.TEST) },
-                        onEditQuestion = { questionToEdit = it },
-                        onDeleteQuestion = { questionToDelete = it }
+                        onOpenContextMenu = { questionContextMenu = it }
                     )
                     LearnStep.TEST -> StepTestLaunch(
                         uiState = uiState,
@@ -693,8 +908,7 @@ fun StepEditorial(
     uiState: DailyLearnUiState,
     onOpenReader: () -> Unit,
     onNext: () -> Unit,
-    onEditEditorial: () -> Unit,
-    onDeleteEditorial: () -> Unit
+    onOpenContextMenu: () -> Unit
 ) {
     val editorial = uiState.editorial
     Column(
@@ -724,7 +938,7 @@ fun StepEditorial(
                     .fillMaxWidth()
                     .combinedClickable(
                         onClick = onOpenReader,
-                        onLongClick = onEditEditorial
+                        onLongClick = onOpenContextMenu
                     ),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -736,14 +950,7 @@ fun StepEditorial(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = editorial.source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                        Row {
-                            IconButton(onClick = onEditEditorial, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Editorial", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                            }
-                            IconButton(onClick = onDeleteEditorial, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Editorial", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-                            }
-                        }
+                        Text(text = "${editorial.readTimeMinutes} min read", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -803,8 +1010,7 @@ fun StepVocabulary(
     onNextVocab: () -> Unit,
     onPrevVocab: () -> Unit,
     onMarkReviewed: (String, Boolean) -> Unit,
-    onEditWord: (VocabularyEntity) -> Unit,
-    onDeleteWord: (VocabularyEntity) -> Unit
+    onOpenContextMenu: (VocabularyEntity) -> Unit
 ) {
     val words = uiState.vocabulary
     if (words.isEmpty()) {
@@ -836,24 +1042,16 @@ fun StepVocabulary(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Word ${index + 1} of ${words.size}", style = MaterialTheme.typography.labelLarge)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = word.learningStatus,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
-                }
-                IconButton(onClick = { onEditWord(word) }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Word", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                }
-                IconButton(onClick = { onDeleteWord(word) }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Word", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-                }
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Text(
+                    text = word.learningStatus,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
             }
         }
 
@@ -869,7 +1067,7 @@ fun StepVocabulary(
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = { /* Flip or read */ },
-                    onLongClick = { onEditWord(word) }
+                    onLongClick = { onOpenContextMenu(word) }
                 ),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -954,8 +1152,7 @@ fun StepVocabulary(
 fun StepGrammar(
     uiState: DailyLearnUiState,
     onNextRule: () -> Unit,
-    onEditGrammar: (GrammarRuleEntity) -> Unit,
-    onDeleteGrammar: (GrammarRuleEntity) -> Unit
+    onOpenContextMenu: (GrammarRuleEntity) -> Unit
 ) {
     val rules = uiState.grammarRules
     if (rules.isEmpty()) {
@@ -986,14 +1183,7 @@ fun StepGrammar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Rule ${index + 1} of ${rules.size}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Row {
-                IconButton(onClick = { onEditGrammar(rule) }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Rule", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                }
-                IconButton(onClick = { onDeleteGrammar(rule) }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Rule", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-                }
-            }
+            Text("Hold card for options", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
 
         ElevatedCard(
@@ -1001,7 +1191,7 @@ fun StepGrammar(
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = {},
-                    onLongClick = { onEditGrammar(rule) }
+                    onLongClick = { onOpenContextMenu(rule) }
                 ),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -1053,8 +1243,7 @@ fun StepGrammar(
 fun StepExpressions(
     uiState: DailyLearnUiState,
     onNextPhrase: () -> Unit,
-    onEditPhrase: (PhraseEntity) -> Unit,
-    onDeletePhrase: (PhraseEntity) -> Unit
+    onOpenContextMenu: (PhraseEntity) -> Unit
 ) {
     val phrases = uiState.phrases
     if (phrases.isEmpty()) {
@@ -1085,14 +1274,7 @@ fun StepExpressions(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Expression ${index + 1} of ${phrases.size}", style = MaterialTheme.typography.titleMedium)
-            Row {
-                IconButton(onClick = { onEditPhrase(phrase) }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Phrase", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                }
-                IconButton(onClick = { onDeletePhrase(phrase) }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Phrase", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-                }
-            }
+            Text("Hold card for options", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
 
         ElevatedCard(
@@ -1100,7 +1282,7 @@ fun StepExpressions(
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = {},
-                    onLongClick = { onEditPhrase(phrase) }
+                    onLongClick = { onOpenContextMenu(phrase) }
                 ),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -1140,8 +1322,7 @@ fun StepPractice(
     onSelectAnswer: (String, Int) -> Unit,
     onSubmit: () -> Unit,
     onProceedToTest: () -> Unit,
-    onEditQuestion: (QuestionEntity) -> Unit,
-    onDeleteQuestion: (QuestionEntity) -> Unit
+    onOpenContextMenu: (QuestionEntity) -> Unit
 ) {
     val questions = uiState.questions
     if (questions.isEmpty()) {
@@ -1164,7 +1345,7 @@ fun StepPractice(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Step 5: Practice Questions (Hold card to edit/delete)",
+            text = "Step 5: Practice Questions (Hold card for options)",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -1175,32 +1356,17 @@ fun StepPractice(
                     .fillMaxWidth()
                     .combinedClickable(
                         onClick = {},
-                        onLongClick = { onEditQuestion(q) }
+                        onLongClick = { onOpenContextMenu(q) }
                     ),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Q${qIdx + 1}. ${q.question}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Row {
-                            IconButton(onClick = { onEditQuestion(q) }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Question", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                            }
-                            IconButton(onClick = { onDeleteQuestion(q) }, modifier = Modifier.size(28.dp)) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Question", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    }
+                    Text(
+                        text = "Q${qIdx + 1}. ${q.question}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
                     Spacer(modifier = Modifier.height(10.dp))
 
                     val selectedAns = uiState.practiceAnswers[q.id]

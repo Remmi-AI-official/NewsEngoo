@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +35,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -129,6 +131,50 @@ fun GrammarScreen(
 
     var ruleToEdit by remember { mutableStateOf<GrammarRuleEntity?>(null) }
     var ruleToDelete by remember { mutableStateOf<GrammarRuleEntity?>(null) }
+    var ruleContextMenu by remember { mutableStateOf<GrammarRuleEntity?>(null) }
+
+    ruleContextMenu?.let { rule ->
+        AlertDialog(
+            onDismissRequest = { ruleContextMenu = null },
+            title = { Text("Grammar Rule Options", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(rule.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(rule.rule, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    TextButton(
+                        onClick = {
+                            ruleToEdit = rule
+                            ruleContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Edit Rule")
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            ruleToDelete = rule
+                            ruleContextMenu = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Delete Rule", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { ruleContextMenu = null }) { Text("Close") }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -202,7 +248,7 @@ fun GrammarScreen(
                                 .fillMaxWidth()
                                 .combinedClickable(
                                     onClick = {},
-                                    onLongClick = { ruleToEdit = rule }
+                                    onLongClick = { ruleContextMenu = rule }
                                 ),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -220,20 +266,12 @@ fun GrammarScreen(
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { ruleToEdit = rule }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Default.Edit, contentDescription = "Edit Rule", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                                        }
-                                        IconButton(onClick = { ruleToDelete = rule }, modifier = Modifier.size(32.dp)) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Delete Rule", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-                                        }
-                                        IconButton(onClick = { viewModel.toggleFavorite(rule.id, !rule.isFavorite) }, modifier = Modifier.size(32.dp)) {
-                                            Icon(
-                                                imageVector = if (rule.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                                contentDescription = "Favorite",
-                                                tint = if (rule.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
-                                            )
-                                        }
+                                    IconButton(onClick = { viewModel.toggleFavorite(rule.id, !rule.isFavorite) }, modifier = Modifier.size(32.dp)) {
+                                        Icon(
+                                            imageVector = if (rule.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            contentDescription = "Favorite",
+                                            tint = if (rule.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
+                                        )
                                     }
                                 }
 

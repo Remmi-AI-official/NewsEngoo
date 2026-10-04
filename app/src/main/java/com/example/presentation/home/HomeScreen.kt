@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -101,19 +102,26 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 4.dp)
+                ) {
                     Text(
                         text = "Good Day",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Text(
                         text = "Your English Journey",
-                        style = MaterialTheme.typography.headlineMedium.copy(
+                        style = MaterialTheme.typography.titleLarge.copy(
                             fontFamily = FontFamily.Serif,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
                         ),
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = uiState.formattedDate,
@@ -122,24 +130,33 @@ fun HomeScreen(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
                     IconButton(
                         onClick = onNavigateToSearch,
-                        modifier = Modifier.testTag("home_search_btn")
+                        modifier = Modifier
+                            .size(40.dp)
+                            .testTag("home_search_btn")
                     ) {
                         Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
                     }
                     IconButton(
                         onClick = onNavigateToFavorites,
-                        modifier = Modifier.testTag("home_favorites_btn")
+                        modifier = Modifier
+                            .size(40.dp)
+                            .testTag("home_favorites_btn")
                     ) {
                         Icon(imageVector = Icons.Default.Star, contentDescription = "Favorites", tint = MaterialTheme.colorScheme.secondary)
                     }
                     IconButton(
                         onClick = onNavigateToSettings,
-                        modifier = Modifier.testTag("home_settings_btn")
+                        modifier = Modifier
+                            .size(40.dp)
+                            .testTag("home_settings_btn")
                     ) {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }

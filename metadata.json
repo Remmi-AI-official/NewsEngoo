@@ -1,0 +1,7 @@
+{
+  "name": "Editorial English",
+  "description": "Transform daily newspaper editorials into an English-learning library with vocabulary, grammar, practice, tests, and spaced revision.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

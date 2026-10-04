@@ -1,6 +1,8 @@
 package com.example.presentation.learn
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,12 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
@@ -32,11 +37,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -98,6 +103,12 @@ class GrammarViewModel(private val app: EditorialApplication) : ViewModel() {
         }
     }
 
+    fun updateRule(rule: GrammarRuleEntity) {
+        viewModelScope.launch {
+            grammarRepo.updateRule(rule)
+        }
+    }
+
     fun deleteRule(id: String) {
         viewModelScope.launch {
             grammarRepo.deleteRule(id)
@@ -105,7 +116,7 @@ class GrammarViewModel(private val app: EditorialApplication) : ViewModel() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun GrammarScreen(
     onNavigateBack: () -> Unit,
@@ -115,31 +126,9 @@ fun GrammarScreen(
     val rules by viewModel.rules.collectAsState()
     var searchInput by remember { mutableStateOf("") }
     var filterFavorites by remember { mutableStateOf(false) }
-    var ruleToDelete by remember { mutableStateOf<GrammarRuleEntity?>(null) }
 
-    ruleToDelete?.let { r ->
-        AlertDialog(
-            onDismissRequest = { ruleToDelete = null },
-            title = { Text("Delete Grammar Rule?") },
-            text = { Text("Are you sure you want to delete '${r.title}'? This action cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.deleteRule(r.id)
-                        ruleToDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { ruleToDelete = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
+    var ruleToEdit by remember { mutableStateOf<GrammarRuleEntity?>(null) }
+    var ruleToDelete by remember { mutableStateOf<GrammarRuleEntity?>(null) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -209,7 +198,12 @@ fun GrammarScreen(
                 ) {
                     items(rules, key = { it.id }) { rule ->
                         ElevatedCard(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = {},
+                                    onLongClick = { ruleToEdit = rule }
+                                ),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
@@ -227,22 +221,17 @@ fun GrammarScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { viewModel.toggleFavorite(rule.id, !rule.isFavorite) }) {
+                                        IconButton(onClick = { ruleToEdit = rule }, modifier = Modifier.size(32.dp)) {
+                                            Icon(Icons.Default.Edit, contentDescription = "Edit Rule", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                        IconButton(onClick = { ruleToDelete = rule }, modifier = Modifier.size(32.dp)) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Delete Rule", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                                        }
+                                        IconButton(onClick = { viewModel.toggleFavorite(rule.id, !rule.isFavorite) }, modifier = Modifier.size(32.dp)) {
                                             Icon(
                                                 imageVector = if (rule.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                                 contentDescription = "Favorite",
                                                 tint = if (rule.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = { ruleToDelete = rule },
-                                            modifier = Modifier.size(32.dp).testTag("grammar_delete_btn")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.DeleteOutline,
-                                                contentDescription = "Delete Rule",
-                                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }
@@ -292,6 +281,91 @@ fun GrammarScreen(
                     }
                 }
             }
+        }
+
+        // Edit Rule Dialog
+        ruleToEdit?.let { rule ->
+            var editTitle by remember(rule) { mutableStateOf(rule.title) }
+            var editRule by remember(rule) { mutableStateOf(rule.rule) }
+            var editExplanation by remember(rule) { mutableStateOf(rule.explanation) }
+
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { ruleToEdit = null },
+                title = { Text("Edit Grammar Rule") },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = editTitle,
+                            onValueChange = { editTitle = it },
+                            label = { Text("Title") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editRule,
+                            onValueChange = { editRule = it },
+                            label = { Text("Rule Statement") },
+                            modifier = Modifier.fillMaxWidth().height(100.dp)
+                        )
+                        OutlinedTextField(
+                            value = editExplanation,
+                            onValueChange = { editExplanation = it },
+                            label = { Text("Explanation") },
+                            modifier = Modifier.fillMaxWidth().height(100.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.updateRule(
+                                rule.copy(
+                                    title = editTitle.trim(),
+                                    rule = editRule.trim(),
+                                    explanation = editExplanation.trim()
+                                )
+                            )
+                            ruleToEdit = null
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { ruleToEdit = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Delete Rule Dialog
+        ruleToDelete?.let { rule ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { ruleToDelete = null },
+                title = { Text("Delete Grammar Rule?") },
+                text = { Text("Are you sure you want to delete '${rule.title}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteRule(rule.id)
+                            ruleToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { ruleToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

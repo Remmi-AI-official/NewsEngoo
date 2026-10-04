@@ -150,9 +150,47 @@ class DailyLearnViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    // Editorial Operations
+    fun updateEditorial(title: String, source: String, content: String) {
+        val current = _uiState.value.editorial ?: return
+        viewModelScope.launch {
+            val updated = current.copy(
+                title = title.trim(),
+                source = source.trim(),
+                contentMarkdown = content.trim()
+            )
+            editorialRepo.updateEditorial(updated)
+            _uiState.value = _uiState.value.copy(editorial = updated)
+        }
+    }
+
+    fun deleteEditorial() {
+        val current = _uiState.value.editorial ?: return
+        viewModelScope.launch {
+            editorialRepo.deleteEditorial(current.id)
+            _uiState.value = _uiState.value.copy(editorial = null)
+        }
+    }
+
+    // Vocabulary Operations
+    fun updateWord(word: VocabularyEntity) {
+        viewModelScope.launch {
+            vocabRepo.updateWord(word)
+            loadDay(_uiState.value.date)
+        }
+    }
+
     fun deleteWord(wordId: String) {
         viewModelScope.launch {
             vocabRepo.deleteWord(wordId)
+            loadDay(_uiState.value.date)
+        }
+    }
+
+    // Grammar Operations
+    fun updateGrammarRule(rule: GrammarRuleEntity) {
+        viewModelScope.launch {
+            grammarRepo.updateRule(rule)
             loadDay(_uiState.value.date)
         }
     }
@@ -164,9 +202,32 @@ class DailyLearnViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    // Phrase Operations
+    fun updatePhrase(phrase: PhraseEntity) {
+        viewModelScope.launch {
+            phraseRepo.updatePhrase(phrase)
+            loadDay(_uiState.value.date)
+        }
+    }
+
     fun deletePhrase(phraseId: String) {
         viewModelScope.launch {
             phraseRepo.deletePhrase(phraseId)
+            loadDay(_uiState.value.date)
+        }
+    }
+
+    // Question Operations
+    fun updateQuestion(question: QuestionEntity) {
+        viewModelScope.launch {
+            testRepo.updateQuestion(question)
+            loadDay(_uiState.value.date)
+        }
+    }
+
+    fun deleteQuestion(questionId: String) {
+        viewModelScope.launch {
+            testRepo.deleteQuestion(questionId)
             loadDay(_uiState.value.date)
         }
     }

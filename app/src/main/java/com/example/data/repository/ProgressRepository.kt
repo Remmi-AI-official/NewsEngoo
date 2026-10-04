@@ -96,6 +96,8 @@ class ProgressRepository(
 
     fun getRecordedDates(): Flow<List<String>> = progressDao.getActiveDates()
 
+    suspend fun resetDailyProgress(date: String) = progressDao.deleteDailyProgress(date)
+
     /**
      * Calculates real-time learning metrics, streaks, strong & weak areas.
      */

@@ -1,7 +1,9 @@
 package com.example.presentation.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +28,8 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
@@ -38,6 +42,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -49,12 +54,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,7 +80,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.local.entity.DailyProgressEntity
 import com.example.data.local.entity.EditorialEntity
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToReader: (String) -> Unit,
@@ -84,6 +94,8 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showEditEditorialDialog by remember { mutableStateOf(false) }
+    var showDeleteEditorialDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -233,6 +245,10 @@ fun HomeScreen(
                 ElevatedCard(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .combinedClickable(
+                            onClick = { onNavigateToReader(editorial.id) },
+                            onLongClick = { showEditEditorialDialog = true }
+                        )
                         .testTag("today_editorial_card"),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.elevatedCardColors(
@@ -258,11 +274,20 @@ fun HomeScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
-                            Text(
-                                text = "${editorial.readTimeMinutes} min read",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "${editorial.readTimeMinutes} min read",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                IconButton(onClick = { showEditEditorialDialog = true }, modifier = Modifier.size(28.dp)) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit Editorial", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                }
+                                IconButton(onClick = { showDeleteEditorialDialog = true }, modifier = Modifier.size(28.dp)) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Editorial", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -524,6 +549,87 @@ fun HomeScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Edit Editorial Dialog
+        if (showEditEditorialDialog && uiState.todayEditorial != null) {
+            val ed = uiState.todayEditorial!!
+            var editTitle by remember(ed) { mutableStateOf(ed.title) }
+            var editSource by remember(ed) { mutableStateOf(ed.source) }
+            var editContent by remember(ed) { mutableStateOf(ed.contentMarkdown) }
+
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showEditEditorialDialog = false },
+                title = { Text("Edit Today's Editorial") },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = editTitle,
+                            onValueChange = { editTitle = it },
+                            label = { Text("Title") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editSource,
+                            onValueChange = { editSource = it },
+                            label = { Text("Source") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editContent,
+                            onValueChange = { editContent = it },
+                            label = { Text("Content (Markdown)") },
+                            modifier = Modifier.fillMaxWidth().height(160.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.updateEditorial(ed.id, editTitle, editSource, editContent)
+                            showEditEditorialDialog = false
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { showEditEditorialDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Delete Editorial Dialog
+        if (showDeleteEditorialDialog && uiState.todayEditorial != null) {
+            val ed = uiState.todayEditorial!!
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showDeleteEditorialDialog = false },
+                title = { Text("Delete Today's Editorial?") },
+                text = { Text("Are you sure you want to delete this editorial? You can always import or paste a new one.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteEditorial(ed.id)
+                            showDeleteEditorialDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { showDeleteEditorialDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

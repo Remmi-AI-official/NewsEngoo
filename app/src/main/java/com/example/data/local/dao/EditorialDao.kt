@@ -49,9 +49,6 @@ interface EditorialDao {
     @Query("DELETE FROM editorials WHERE date = :date")
     suspend fun deleteEditorialByDate(date: String)
 
-    @Query("DELETE FROM editorials")
-    suspend fun deleteAllEditorials()
-
     @Query("SELECT * FROM editorials WHERE isFavorite = 1 ORDER BY date DESC")
     fun getFavoriteEditorials(): Flow<List<EditorialEntity>>
 

@@ -255,24 +255,6 @@ class DictionaryViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun deleteWord(wordId: String) {
-        viewModelScope.launch {
-            vocabRepo.deleteWord(wordId)
-            _userMessage.value = "Word deleted."
-        }
-    }
-
-    fun deleteSelectedWords() {
-        viewModelScope.launch {
-            val toDelete = _selectedWordIds.value.toList()
-            if (toDelete.isNotEmpty()) {
-                vocabRepo.deleteWords(toDelete)
-                exitMultiSelect()
-                _userMessage.value = "${toDelete.size} words deleted."
-            }
-        }
-    }
-
     fun assignWordToCategory(wordId: String, categoryId: String) {
         viewModelScope.launch {
             vocabRepo.assignWordToCategory(wordId, categoryId)
@@ -320,6 +302,20 @@ class DictionaryViewModel(application: Application) : AndroidViewModel(applicati
                 _userMessage.value = "Created folder '$name'!"
             }
             exitMultiSelect()
+        }
+    }
+
+    fun deleteWord(wordId: String) {
+        viewModelScope.launch {
+            vocabRepo.deleteWord(wordId)
+            _userMessage.value = "Word deleted."
+        }
+    }
+
+    fun updateWord(word: VocabularyEntity) {
+        viewModelScope.launch {
+            vocabRepo.updateWord(word)
+            _userMessage.value = "Word updated."
         }
     }
 

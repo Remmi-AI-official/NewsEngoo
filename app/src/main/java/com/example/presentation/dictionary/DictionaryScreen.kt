@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
@@ -32,7 +33,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
@@ -49,13 +50,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -106,9 +107,10 @@ fun DictionaryScreen(
     // Dialog & Sheet States
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showBatchFolderPicker by remember { mutableStateOf(false) }
-    var showDeleteSelectedDialog by remember { mutableStateOf(false) }
-    var wordToDelete by remember { mutableStateOf<VocabularyEntity?>(null) }
     var wordForQuickFolder by remember { mutableStateOf<VocabularyEntity?>(null) }
+    var wordToEdit by remember { mutableStateOf<VocabularyEntity?>(null) }
+    var wordToDelete by remember { mutableStateOf<VocabularyEntity?>(null) }
+    var wordForActionMenu by remember { mutableStateOf<VocabularyEntity?>(null) }
 
     // New folder form state
     var newFolderName by remember { mutableStateOf("") }
@@ -163,7 +165,7 @@ fun DictionaryScreen(
                             onClick = { showBatchFolderPicker = true },
                             enabled = uiState.selectedWordIds.isNotEmpty(),
                             modifier = Modifier
-                                .padding(end = 4.dp)
+                                .padding(end = 8.dp)
                                 .testTag("batch_add_to_folder_btn"),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
@@ -172,23 +174,7 @@ fun DictionaryScreen(
                         ) {
                             Icon(imageVector = Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Folder", fontSize = 12.sp)
-                        }
-
-                        Button(
-                            onClick = { showDeleteSelectedDialog = true },
-                            enabled = uiState.selectedWordIds.isNotEmpty(),
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .testTag("batch_delete_words_btn"),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Delete (${uiState.selectedWordIds.size})", fontSize = 12.sp)
+                            Text("Add to Folder", fontSize = 12.sp)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -506,8 +492,10 @@ fun DictionaryScreen(
                                     }
                                 },
                                 onLongClick = {
-                                    if (!uiState.isMultiSelectMode) {
-                                        viewModel.startMultiSelect(word.id)
+                                    if (uiState.isMultiSelectMode) {
+                                        viewModel.toggleWordSelection(word.id)
+                                    } else {
+                                        wordForActionMenu = word
                                     }
                                 },
                                 onToggleSelect = {
@@ -518,9 +506,6 @@ fun DictionaryScreen(
                                 },
                                 onManageFolderClick = {
                                     wordForQuickFolder = word
-                                },
-                                onDeleteClick = {
-                                    wordToDelete = word
                                 }
                             )
                         }
@@ -531,57 +516,6 @@ fun DictionaryScreen(
                     }
                 }
             }
-        }
-
-        // Dialog: Delete Single Word
-        if (wordToDelete != null) {
-            val word = wordToDelete!!
-            AlertDialog(
-                onDismissRequest = { wordToDelete = null },
-                title = { Text("Delete '${word.word}'?") },
-                text = { Text("Are you sure you want to delete this word from your dictionary? This will also remove it from any assigned subject folders.") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            viewModel.deleteWord(word.id)
-                            wordToDelete = null
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Delete")
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { wordToDelete = null }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
-
-        // Dialog: Delete Selected Words Batch
-        if (showDeleteSelectedDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteSelectedDialog = false },
-                title = { Text("Delete ${uiState.selectedWordIds.size} Words?") },
-                text = { Text("Are you sure you want to permanently delete these ${uiState.selectedWordIds.size} selected words from your dictionary?") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showDeleteSelectedDialog = false
-                            viewModel.deleteSelectedWords()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Delete All")
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { showDeleteSelectedDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
         }
 
         // Dialog: Quick Create Subject Folder
@@ -680,6 +614,229 @@ fun DictionaryScreen(
             )
         }
 
+        // Modal Bottom Sheet: Word Long-Press Action Menu (Edit, Delete, Folders, Select)
+        wordForActionMenu?.let { word ->
+            ModalBottomSheet(
+                onDismissRequest = { wordForActionMenu = null }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = word.word,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = word.meaning,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Divider(modifier = Modifier.padding(vertical = 6.dp))
+
+                    // Edit Action
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val target = word
+                                wordForActionMenu = null
+                                wordToEdit = target
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Text("Edit Word Details", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        }
+                    }
+
+                    // Delete Action
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val target = word
+                                wordForActionMenu = null
+                                wordToDelete = target
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Text("Delete Word", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+
+                    // Assign to Folders Action
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val target = word
+                                wordForActionMenu = null
+                                wordForQuickFolder = target
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                            Text("Manage Subject Folders", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        }
+                    }
+
+                    // Select Multiple Action
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val target = word
+                                wordForActionMenu = null
+                                viewModel.startMultiSelect(target.id)
+                            },
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.Checklist, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                            Text("Select Multiple Words", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+
+        // Dialog: Edit Word
+        wordToEdit?.let { word ->
+            var editWord by remember(word) { mutableStateOf(word.word) }
+            var editPronunciation by remember(word) { mutableStateOf(word.pronunciation) }
+            var editPartOfSpeech by remember(word) { mutableStateOf(word.partOfSpeech) }
+            var editMeaning by remember(word) { mutableStateOf(word.meaning) }
+            var editHindiMeaning by remember(word) { mutableStateOf(word.hindiMeaning) }
+            var editExample by remember(word) { mutableStateOf(word.exampleSentence) }
+
+            AlertDialog(
+                onDismissRequest = { wordToEdit = null },
+                title = { Text("Edit Word: ${word.word}") },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = editWord,
+                            onValueChange = { editWord = it },
+                            label = { Text("Word") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editPronunciation,
+                            onValueChange = { editPronunciation = it },
+                            label = { Text("Pronunciation") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editPartOfSpeech,
+                            onValueChange = { editPartOfSpeech = it },
+                            label = { Text("Part of Speech (noun, verb...)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editMeaning,
+                            onValueChange = { editMeaning = it },
+                            label = { Text("English Meaning") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editHindiMeaning,
+                            onValueChange = { editHindiMeaning = it },
+                            label = { Text("Hindi Meaning") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editExample,
+                            onValueChange = { editExample = it },
+                            label = { Text("Example Sentence") },
+                            modifier = Modifier.fillMaxWidth().height(100.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.updateWord(
+                                word.copy(
+                                    word = editWord.trim(),
+                                    pronunciation = editPronunciation.trim(),
+                                    partOfSpeech = editPartOfSpeech.trim(),
+                                    meaning = editMeaning.trim(),
+                                    hindiMeaning = editHindiMeaning.trim(),
+                                    exampleSentence = editExample.trim()
+                                )
+                            )
+                            wordToEdit = null
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { wordToEdit = null }) { Text("Cancel") }
+                }
+            )
+        }
+
+        // Dialog: Delete Word
+        wordToDelete?.let { word ->
+            AlertDialog(
+                onDismissRequest = { wordToDelete = null },
+                title = { Text("Delete Word '${word.word}'?") },
+                text = { Text("Are you sure you want to delete '${word.word}' from your dictionary?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteWord(word.id)
+                            wordToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { wordToDelete = null }) { Text("Cancel") }
+                }
+            )
+        }
+
         // Modal Dialog: Quick Folder Management for a Single Word
         wordForQuickFolder?.let { word ->
             val assigned = uiState.wordCategories[word.id] ?: emptyList()
@@ -712,8 +869,7 @@ fun DictionaryWordCard(
     onLongClick: () -> Unit,
     onToggleSelect: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onManageFolderClick: () -> Unit,
-    onDeleteClick: () -> Unit = {}
+    onManageFolderClick: () -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -798,18 +954,6 @@ fun DictionaryWordCard(
                                 imageVector = if (word.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "Favorite",
                                 tint = if (word.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = onDeleteClick,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteOutline,
-                                contentDescription = "Delete Word",
-                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                                 modifier = Modifier.size(20.dp)
                             )
                         }

@@ -14,6 +14,8 @@ class PhraseRepository(private val phraseDao: PhraseDao) {
 
     suspend fun savePhrase(phrase: PhraseEntity) = phraseDao.insertPhrase(phrase)
 
+    suspend fun updatePhrase(phrase: PhraseEntity) = phraseDao.updatePhrase(phrase)
+
     suspend fun toggleFavorite(id: String, isFavorite: Boolean) = phraseDao.setFavorite(id, isFavorite)
 
     suspend fun setCompleted(id: String, isCompleted: Boolean) = phraseDao.setCompleted(id, isCompleted)
@@ -23,8 +25,6 @@ class PhraseRepository(private val phraseDao: PhraseDao) {
     suspend fun deletePhrase(id: String) = phraseDao.deletePhrase(id)
 
     suspend fun deletePhrasesForDate(date: String) = phraseDao.deletePhrasesForDate(date)
-
-    suspend fun deleteAllPhrases() = phraseDao.deleteAllPhrases()
 
     fun getFavoritePhrases(): Flow<List<PhraseEntity>> = phraseDao.getFavoritePhrases()
 

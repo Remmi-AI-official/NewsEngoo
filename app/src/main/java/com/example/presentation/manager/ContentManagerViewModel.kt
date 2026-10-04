@@ -4,12 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.EditorialApplication
-import com.example.data.local.entity.EditorialEntity
-import com.example.data.local.entity.GrammarRuleEntity
 import com.example.data.local.entity.ImportHistoryEntity
-import com.example.data.local.entity.PhraseEntity
-import com.example.data.local.entity.TestEntity
-import com.example.data.local.entity.VocabularyEntity
 import com.example.domain.model.ContentParser
 import com.example.domain.model.DailyPackageImport
 import com.example.domain.model.DateUtils
@@ -410,6 +405,34 @@ class ContentManagerViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    fun clearDemoData() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isProcessing = true)
+            importExportRepo.clearAllDemoData()
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                lastSuccessMessage = "All demo data removed successfully! You now have a clean slate for your daily content."
+            )
+        }
+    }
+
+    fun clearDateData(date: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isProcessing = true)
+            importExportRepo.clearDataForDate(date)
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                lastSuccessMessage = "All content for $date cleared."
+            )
+        }
+    }
+
+    fun deleteHistoryItem(historyId: String) {
+        viewModelScope.launch {
+            app.database.importHistoryDao().deleteHistory(historyId)
+        }
+    }
+
     fun exportFullBackup() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isProcessing = true)
@@ -437,107 +460,6 @@ class ContentManagerViewModel(application: Application) : AndroidViewModel(appli
                     lastErrorMessage = "Restore failed: ${e.message}"
                 )
             }
-        }
-    }
-
-    val allEditorials: StateFlow<List<EditorialEntity>> = app.editorialRepository.getAllEditorials()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val allVocabWords: StateFlow<List<VocabularyEntity>> = app.vocabularyRepository.getAllWords()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val allGrammarRules: StateFlow<List<GrammarRuleEntity>> = app.grammarRepository.getAllRules()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val allPhrases: StateFlow<List<PhraseEntity>> = app.phraseRepository.getAllPhrases()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val allTests: StateFlow<List<TestEntity>> = app.practiceTestRepository.getAllTests()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun deleteEditorial(id: String) {
-        viewModelScope.launch {
-            app.editorialRepository.deleteEditorial(id)
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Editorial deleted successfully.")
-        }
-    }
-
-    fun deleteWord(id: String) {
-        viewModelScope.launch {
-            app.vocabularyRepository.deleteWord(id)
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Word deleted successfully.")
-        }
-    }
-
-    fun deleteGrammarRule(id: String) {
-        viewModelScope.launch {
-            app.grammarRepository.deleteRule(id)
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Grammar rule deleted successfully.")
-        }
-    }
-
-    fun deletePhrase(id: String) {
-        viewModelScope.launch {
-            app.phraseRepository.deletePhrase(id)
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Phrase deleted successfully.")
-        }
-    }
-
-    fun deleteTest(testId: String) {
-        viewModelScope.launch {
-            app.practiceTestRepository.deleteTest(testId)
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "Test deleted successfully.")
-        }
-    }
-
-    fun deleteContentByDate(date: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isProcessing = true)
-            app.editorialRepository.deleteEditorialByDate(date)
-            app.vocabularyRepository.deleteWordsForDate(date)
-            app.grammarRepository.deleteRulesForDate(date)
-            app.phraseRepository.deletePhrasesForDate(date)
-            app.practiceTestRepository.deleteTestsForDate(date)
-            _uiState.value = _uiState.value.copy(
-                isProcessing = false,
-                lastSuccessMessage = "All content for date $date has been deleted."
-            )
-        }
-    }
-
-    fun clearAllEditorials() {
-        viewModelScope.launch {
-            app.editorialRepository.deleteAllEditorials()
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "All editorials cleared.")
-        }
-    }
-
-    fun clearAllVocabulary() {
-        viewModelScope.launch {
-            app.vocabularyRepository.deleteAllWords()
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "All vocabulary words cleared.")
-        }
-    }
-
-    fun clearAllGrammar() {
-        viewModelScope.launch {
-            app.grammarRepository.deleteAllRules()
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "All grammar rules cleared.")
-        }
-    }
-
-    fun clearAllPhrases() {
-        viewModelScope.launch {
-            app.phraseRepository.deleteAllPhrases()
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "All phrases cleared.")
-        }
-    }
-
-    fun clearAllTests() {
-        viewModelScope.launch {
-            app.practiceTestRepository.deleteAllTests()
-            app.practiceTestRepository.deleteAllQuestions()
-            _uiState.value = _uiState.value.copy(lastSuccessMessage = "All tests and questions cleared.")
         }
     }
 }

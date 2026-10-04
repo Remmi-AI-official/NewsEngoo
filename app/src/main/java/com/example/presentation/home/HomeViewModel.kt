@@ -85,4 +85,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             editorialRepo.toggleFavorite(id, isFav)
         }
     }
+
+    fun updateEditorial(id: String, title: String, source: String, content: String) {
+        viewModelScope.launch {
+            val current = editorialRepo.getEditorialByIdSync(id) ?: return@launch
+            editorialRepo.updateEditorial(
+                current.copy(
+                    title = title.trim(),
+                    source = source.trim(),
+                    contentMarkdown = content.trim()
+                )
+            )
+        }
+    }
+
+    fun deleteEditorial(id: String) {
+        viewModelScope.launch {
+            editorialRepo.deleteEditorial(id)
+        }
+    }
 }

@@ -15,6 +15,8 @@ class GrammarRepository(private val grammarDao: GrammarDao) {
 
     suspend fun saveRule(rule: GrammarRuleEntity) = grammarDao.insertRule(rule)
 
+    suspend fun updateRule(rule: GrammarRuleEntity) = grammarDao.updateRule(rule)
+
     suspend fun toggleFavorite(id: String, isFavorite: Boolean) = grammarDao.setFavorite(id, isFavorite)
 
     suspend fun setCompleted(id: String, isCompleted: Boolean) = grammarDao.setCompleted(id, isCompleted)
@@ -24,8 +26,6 @@ class GrammarRepository(private val grammarDao: GrammarDao) {
     suspend fun deleteRule(id: String) = grammarDao.deleteRule(id)
 
     suspend fun deleteRulesForDate(date: String) = grammarDao.deleteRulesForDate(date)
-
-    suspend fun deleteAllRules() = grammarDao.deleteAllRules()
 
     fun getFavoriteRules(): Flow<List<GrammarRuleEntity>> = grammarDao.getFavoriteRules()
 

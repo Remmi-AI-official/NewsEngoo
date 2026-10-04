@@ -44,6 +44,32 @@ class ContentImportExportRepository(
     suspend fun clearHistory() = importHistoryDao.clearHistory()
 
     /**
+     * Clears all content (editorial, words cross ref, grammar, phrases, questions, test) for a specific date.
+     */
+    suspend fun clearDataForDate(date: String) {
+        val edId = "ed_$date"
+        editorialRepository.deleteEditorial(edId)
+        editorialRepository.deleteEditorialByDate(date)
+        vocabularyRepository.unlinkWordsForDate(date)
+        vocabularyRepository.unlinkWordsForEditorial(edId)
+        vocabularyRepository.deleteUnlinkedWords()
+        grammarRepository.deleteRulesForDate(date)
+        phraseRepository.deletePhrasesForDate(date)
+        testRepository.deleteQuestionsForDate(date)
+        testRepository.deleteTestsForDate(date)
+        progressRepository.resetDailyProgress(date)
+    }
+
+    /**
+     * Clears all pre-seeded demo/sample data (2026-10-04, 2026-10-03, 2026-10-02)
+     */
+    suspend fun clearAllDemoData() {
+        listOf("2026-10-04", "2026-10-03", "2026-10-02").forEach { demoDate ->
+            clearDataForDate(demoDate)
+        }
+    }
+
+    /**
      * Imports a single editorial article.
      */
     suspend fun importEditorial(
@@ -51,8 +77,13 @@ class ContentImportExportRepository(
         contentMarkdown: String,
         date: String,
         source: String = "The Daily Editorial",
-        readTimeMinutes: Int = 5
+        readTimeMinutes: Int = 5,
+        clearPreviousForDate: Boolean = true
     ): EditorialEntity {
+        if (clearPreviousForDate) {
+            editorialRepository.deleteEditorial("ed_$date")
+            editorialRepository.deleteEditorialByDate(date)
+        }
         val id = "ed_$date"
         val entity = EditorialEntity(
             id = id,
@@ -83,10 +114,15 @@ class ContentImportExportRepository(
      */
     suspend fun importDailyPackage(
         packageData: DailyPackageImport,
-        mode: ImportMode = ImportMode.MERGE_DUPLICATES
+        mode: ImportMode = ImportMode.MERGE_DUPLICATES,
+        clearPreviousForDate: Boolean = true
     ): PackageImportReport {
         val date = packageData.date
         val edId = "ed_$date"
+
+        if (clearPreviousForDate) {
+            clearDataForDate(date)
+        }
 
         // 1. Editorial
         var editorialImported = false
@@ -96,7 +132,8 @@ class ContentImportExportRepository(
                 contentMarkdown = packageData.editorial.contentMarkdown,
                 date = date,
                 source = packageData.editorial.source,
-                readTimeMinutes = packageData.editorial.readTimeMinutes
+                readTimeMinutes = packageData.editorial.readTimeMinutes,
+                clearPreviousForDate = false
             )
             editorialImported = true
         }

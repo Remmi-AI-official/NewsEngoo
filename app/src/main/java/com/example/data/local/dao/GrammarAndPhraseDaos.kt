@@ -35,9 +35,6 @@ interface GrammarDao {
     @Query("DELETE FROM grammar_rules WHERE date = :date")
     suspend fun deleteRulesForDate(date: String)
 
-    @Query("DELETE FROM grammar_rules")
-    suspend fun deleteAllRules()
-
     @Query("UPDATE grammar_rules SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(id: String, isFavorite: Boolean)
 
@@ -79,9 +76,6 @@ interface PhraseDao {
 
     @Query("DELETE FROM phrases_expressions WHERE date = :date")
     suspend fun deletePhrasesForDate(date: String)
-
-    @Query("DELETE FROM phrases_expressions")
-    suspend fun deleteAllPhrases()
 
     @Query("UPDATE phrases_expressions SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(id: String, isFavorite: Boolean)

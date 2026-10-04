@@ -54,6 +54,9 @@ interface DailyProgressDao {
     @Query("SELECT COUNT(*) FROM daily_learning_progress WHERE editorialRead = 1")
     fun getEditorialsReadCount(): Flow<Int>
 
+    @Query("DELETE FROM daily_learning_progress WHERE date = :date")
+    suspend fun deleteDailyProgress(date: String)
+
     @Query("SELECT COUNT(*) FROM daily_learning_progress WHERE testTaken = 1")
     fun getTestsCompletedCount(): Flow<Int>
 }

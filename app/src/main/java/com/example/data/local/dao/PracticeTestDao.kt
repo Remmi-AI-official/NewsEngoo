@@ -31,6 +31,30 @@ interface PracticeTestDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertQuestion(question: QuestionEntity)
 
+    @Update
+    suspend fun updateQuestion(question: QuestionEntity)
+
+    @Query("DELETE FROM questions WHERE id = :id")
+    suspend fun deleteQuestion(id: String)
+
+    @Query("DELETE FROM questions WHERE date = :date")
+    suspend fun deleteQuestionsForDate(date: String)
+
+    @Query("DELETE FROM test_question_cross_ref WHERE testId IN (SELECT id FROM tests WHERE date = :date)")
+    suspend fun unlinkQuestionsForTestDate(date: String)
+
+    @Query("DELETE FROM test_question_cross_ref WHERE questionId = :questionId")
+    suspend fun unlinkQuestion(questionId: String)
+
+    @Query("DELETE FROM tests WHERE id = :id")
+    suspend fun deleteTest(id: String)
+
+    @Query("DELETE FROM tests WHERE date = :date")
+    suspend fun deleteTestsForDate(date: String)
+
+    @Update
+    suspend fun updateTest(test: TestEntity)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertQuestions(questions: List<QuestionEntity>)
 
@@ -54,27 +78,6 @@ interface PracticeTestDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTest(test: TestEntity)
-
-    @Query("DELETE FROM tests WHERE id = :testId")
-    suspend fun deleteTest(testId: String)
-
-    @Query("DELETE FROM tests WHERE date = :date")
-    suspend fun deleteTestsForDate(date: String)
-
-    @Query("DELETE FROM tests")
-    suspend fun deleteAllTests()
-
-    @Query("DELETE FROM questions WHERE id = :id")
-    suspend fun deleteQuestion(id: String)
-
-    @Query("DELETE FROM questions WHERE date = :date")
-    suspend fun deleteQuestionsForDate(date: String)
-
-    @Query("DELETE FROM questions")
-    suspend fun deleteAllQuestions()
-
-    @Query("DELETE FROM test_question_cross_ref WHERE testId = :testId")
-    suspend fun deleteTestQuestionRefs(testId: String)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun linkQuestionToTest(crossRef: TestQuestionCrossRef)

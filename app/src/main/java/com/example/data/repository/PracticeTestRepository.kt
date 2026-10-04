@@ -65,6 +65,24 @@ class PracticeTestRepository(
     suspend fun toggleQuestionFavorite(id: String, isFavorite: Boolean) =
         testDao.setQuestionFavorite(id, isFavorite)
 
+    suspend fun updateQuestion(question: QuestionEntity) = testDao.updateQuestion(question)
+
+    suspend fun deleteQuestion(id: String) {
+        testDao.unlinkQuestion(id)
+        testDao.deleteQuestion(id)
+    }
+
+    suspend fun deleteQuestionsForDate(date: String) {
+        testDao.unlinkQuestionsForTestDate(date)
+        testDao.deleteQuestionsForDate(date)
+    }
+
+    suspend fun deleteTest(testId: String) = testDao.deleteTest(testId)
+
+    suspend fun deleteTestsForDate(date: String) = testDao.deleteTestsForDate(date)
+
+    suspend fun updateTest(test: TestEntity) = testDao.updateTest(test)
+
     fun getFavoriteQuestions(): Flow<List<QuestionEntity>> = testDao.getFavoriteQuestions()
 
     fun searchQuestions(query: String): Flow<List<QuestionEntity>> = testDao.searchQuestions(query)
@@ -78,28 +96,6 @@ class PracticeTestRepository(
         mistakeDao.markMistakeImproved(id, isImproved, System.currentTimeMillis())
 
     suspend fun deleteMistake(id: String) = mistakeDao.deleteMistake(id)
-
-    suspend fun deleteTest(testId: String) {
-        testDao.deleteTestQuestionRefs(testId)
-        testDao.deleteTest(testId)
-    }
-
-    suspend fun deleteTestsForDate(date: String) {
-        testDao.deleteTestsForDate(date)
-        testDao.deleteQuestionsForDate(date)
-    }
-
-    suspend fun deleteAllTests() {
-        testDao.deleteAllTests()
-    }
-
-    suspend fun deleteAllQuestions() {
-        testDao.deleteAllQuestions()
-    }
-
-    suspend fun deleteQuestion(questionId: String) {
-        testDao.deleteQuestion(questionId)
-    }
 
     /**
      * Evaluates a completed test, records the attempt, and logs mistakes.

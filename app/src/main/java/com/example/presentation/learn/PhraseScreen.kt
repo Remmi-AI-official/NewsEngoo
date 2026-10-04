@@ -1,5 +1,8 @@
 package com.example.presentation.learn
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,10 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Psychology
@@ -30,11 +36,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -93,6 +99,12 @@ class PhraseViewModel(private val app: EditorialApplication) : ViewModel() {
         }
     }
 
+    fun updatePhrase(phrase: PhraseEntity) {
+        viewModelScope.launch {
+            phraseRepo.updatePhrase(phrase)
+        }
+    }
+
     fun deletePhrase(id: String) {
         viewModelScope.launch {
             phraseRepo.deletePhrase(id)
@@ -100,7 +112,7 @@ class PhraseViewModel(private val app: EditorialApplication) : ViewModel() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PhraseScreen(
     onNavigateBack: () -> Unit,
@@ -110,31 +122,9 @@ fun PhraseScreen(
     val phrases by viewModel.phrases.collectAsState()
     var searchInput by remember { mutableStateOf("") }
     var filterFavorites by remember { mutableStateOf(false) }
-    var phraseToDelete by remember { mutableStateOf<com.example.data.local.entity.PhraseEntity?>(null) }
 
-    phraseToDelete?.let { p ->
-        AlertDialog(
-            onDismissRequest = { phraseToDelete = null },
-            title = { Text("Delete Expression?") },
-            text = { Text("Are you sure you want to delete '${p.phrase}'? This action cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.deletePhrase(p.id)
-                        phraseToDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { phraseToDelete = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
+    var phraseToEdit by remember { mutableStateOf<PhraseEntity?>(null) }
+    var phraseToDelete by remember { mutableStateOf<PhraseEntity?>(null) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -204,7 +194,12 @@ fun PhraseScreen(
                 ) {
                     items(phrases, key = { it.id }) { item ->
                         ElevatedCard(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = {},
+                                    onLongClick = { phraseToEdit = item }
+                                ),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
@@ -224,22 +219,17 @@ fun PhraseScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { viewModel.toggleFavorite(item.id, !item.isFavorite) }) {
+                                        IconButton(onClick = { phraseToEdit = item }, modifier = Modifier.size(32.dp)) {
+                                            Icon(Icons.Default.Edit, contentDescription = "Edit Phrase", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                        IconButton(onClick = { phraseToDelete = item }, modifier = Modifier.size(32.dp)) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Delete Phrase", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                                        }
+                                        IconButton(onClick = { viewModel.toggleFavorite(item.id, !item.isFavorite) }, modifier = Modifier.size(32.dp)) {
                                             Icon(
                                                 imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                                 contentDescription = "Favorite",
                                                 tint = if (item.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = { phraseToDelete = item },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.DeleteOutline,
-                                                contentDescription = "Delete Expression",
-                                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }
@@ -286,6 +276,99 @@ fun PhraseScreen(
                     }
                 }
             }
+        }
+
+        // Edit Phrase Dialog
+        phraseToEdit?.let { phrase ->
+            var editPhrase by remember(phrase) { mutableStateOf(phrase.phrase) }
+            var editMeaning by remember(phrase) { mutableStateOf(phrase.meaning) }
+            var editHindiMeaning by remember(phrase) { mutableStateOf(phrase.hindiMeaning) }
+            var editExample by remember(phrase) { mutableStateOf(phrase.example) }
+
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { phraseToEdit = null },
+                title = { Text("Edit Phrase / Expression") },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = editPhrase,
+                            onValueChange = { editPhrase = it },
+                            label = { Text("Phrase / Expression") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editMeaning,
+                            onValueChange = { editMeaning = it },
+                            label = { Text("Meaning") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editHindiMeaning,
+                            onValueChange = { editHindiMeaning = it },
+                            label = { Text("Hindi Meaning") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editExample,
+                            onValueChange = { editExample = it },
+                            label = { Text("Example Sentence") },
+                            modifier = Modifier.fillMaxWidth().height(100.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.updatePhrase(
+                                phrase.copy(
+                                    phrase = editPhrase.trim(),
+                                    meaning = editMeaning.trim(),
+                                    hindiMeaning = editHindiMeaning.trim(),
+                                    example = editExample.trim()
+                                )
+                            )
+                            phraseToEdit = null
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { phraseToEdit = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Delete Phrase Dialog
+        phraseToDelete?.let { phrase ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { phraseToDelete = null },
+                title = { Text("Delete Expression?") },
+                text = { Text("Are you sure you want to delete '${phrase.phrase}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deletePhrase(phrase.id)
+                            phraseToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { phraseToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

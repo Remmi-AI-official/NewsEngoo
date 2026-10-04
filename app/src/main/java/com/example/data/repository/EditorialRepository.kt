@@ -17,6 +17,10 @@ class EditorialRepository(private val editorialDao: EditorialDao) {
 
     suspend fun saveEditorial(editorial: EditorialEntity) = editorialDao.insertEditorial(editorial)
 
+    suspend fun updateEditorial(editorial: EditorialEntity) = editorialDao.updateEditorial(editorial)
+
+    suspend fun deleteEditorialByDate(date: String) = editorialDao.deleteEditorialByDate(date)
+
     suspend fun updateReadingPosition(id: String, position: Int) = editorialDao.updateReadingPosition(id, position)
 
     suspend fun updateBookmark(id: String, paragraphIndex: Int, note: String) =
@@ -27,10 +31,6 @@ class EditorialRepository(private val editorialDao: EditorialDao) {
     suspend fun setCompleted(id: String, isCompleted: Boolean) = editorialDao.setCompleted(id, isCompleted)
 
     suspend fun deleteEditorial(id: String) = editorialDao.deleteEditorial(id)
-
-    suspend fun deleteEditorialByDate(date: String) = editorialDao.deleteEditorialByDate(date)
-
-    suspend fun deleteAllEditorials() = editorialDao.deleteAllEditorials()
 
     fun getFavoriteEditorials(): Flow<List<EditorialEntity>> = editorialDao.getFavoriteEditorials()
 

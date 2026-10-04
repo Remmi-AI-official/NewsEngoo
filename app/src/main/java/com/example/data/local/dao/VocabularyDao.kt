@@ -42,8 +42,14 @@ interface VocabularyDao {
     @Query("DELETE FROM vocabulary_words WHERE id = :id")
     suspend fun deleteWord(id: String)
 
-    @Query("DELETE FROM vocabulary_words WHERE id IN (:ids)")
-    suspend fun deleteWords(ids: List<String>)
+    @Query("DELETE FROM editorial_vocabulary_cross_ref WHERE date = :date")
+    suspend fun unlinkWordsForDate(date: String)
+
+    @Query("DELETE FROM editorial_vocabulary_cross_ref WHERE editorialId = :editorialId")
+    suspend fun unlinkWordsForEditorial(editorialId: String)
+
+    @Query("DELETE FROM vocabulary_words WHERE id NOT IN (SELECT DISTINCT wordId FROM editorial_vocabulary_cross_ref) AND id NOT IN (SELECT DISTINCT wordId FROM word_category_cross_ref)")
+    suspend fun deleteUnlinkedWords()
 
     @Query("""
         SELECT v.* FROM vocabulary_words v
@@ -167,10 +173,4 @@ interface VocabularyDao {
 
     @Query("SELECT COUNT(*) FROM vocabulary_words WHERE learningStatus = 'MASTERED'")
     fun getMasteredWordsCount(): Flow<Int>
-
-    @Query("DELETE FROM vocabulary_words")
-    suspend fun deleteAllWords()
-
-    @Query("DELETE FROM editorial_vocabulary_cross_ref WHERE date = :date")
-    suspend fun deleteEditorialVocabCrossRefsForDate(date: String)
 }

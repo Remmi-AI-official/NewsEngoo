@@ -1,5 +1,6 @@
 package com.example.presentation.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -81,6 +82,7 @@ fun AppNavHost(
     val isBottomBarVisible = bottomNavItems.any { it.route == currentRoute }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (isBottomBarVisible) {
                 NavigationBar {
@@ -118,7 +120,7 @@ fun AppNavHost(
             startDestination = Screen.Home.route,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             // HOME
             composable(Screen.Home.route) {

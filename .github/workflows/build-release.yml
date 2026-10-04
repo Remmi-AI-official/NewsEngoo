@@ -47,6 +47,46 @@ jobs:
           fi
           touch .env
 
+      - name: Prepare Google Services Configuration
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo "Using GOOGLE_SERVICES_JSON from repository secrets..."
+            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > app/google-services.json
+          elif [ ! -f "app/google-services.json" ]; then
+            echo "Generating fallback app/google-services.json for build..."
+            cat << 'EOF' > app/google-services.json
+          {
+            "project_info": {
+              "project_number": "123456789000",
+              "project_id": "editorial-english-app",
+              "storage_bucket": "editorial-english-app.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789000:android:abcdef1234567890abcdef",
+                  "android_client_info": {
+                    "package_name": "com.aistudio.editorialvocab.kpmzt"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyDummyApiKeyPlaceholderForBuild"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+
       - name: Setup Signing Keystore
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then

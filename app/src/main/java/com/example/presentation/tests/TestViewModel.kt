@@ -127,4 +127,10 @@ class TestViewModel(application: Application) : AndroidViewModel(application) {
             testRepo.markMistakeImproved(mistakeId, isImproved)
         }
     }
+
+    fun deleteTest(testId: String) {
+        viewModelScope.launch {
+            testRepo.deleteTest(testId)
+        }
+    }
 }

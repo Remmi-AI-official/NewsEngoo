@@ -145,4 +145,13 @@ class EditorialReaderViewModel(application: Application) : AndroidViewModel(appl
             }
         }
     }
+
+    fun deleteEditorial(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            if (currentEditorialId.isNotBlank()) {
+                editorialRepo.deleteEditorial(currentEditorialId)
+                onDeleted()
+            }
+        }
+    }
 }

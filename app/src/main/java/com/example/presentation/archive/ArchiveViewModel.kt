@@ -129,6 +129,13 @@ class ArchiveViewModel(application: Application) : AndroidViewModel(application)
         _uiState.value = _uiState.value.copy(filterCompletedOnly = !_uiState.value.filterCompletedOnly)
     }
 
+    fun deleteEditorial(editorialId: String) {
+        viewModelScope.launch {
+            editorialRepo.deleteEditorial(editorialId)
+            selectDate(_uiState.value.selectedDate)
+        }
+    }
+
     private fun loadMonthDates() {
         // Keeps availableDates in sync
     }

@@ -17,9 +17,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -28,6 +32,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -92,6 +97,12 @@ class GrammarViewModel(private val app: EditorialApplication) : ViewModel() {
             grammarRepo.toggleFavorite(id, fav)
         }
     }
+
+    fun deleteRule(id: String) {
+        viewModelScope.launch {
+            grammarRepo.deleteRule(id)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,6 +115,31 @@ fun GrammarScreen(
     val rules by viewModel.rules.collectAsState()
     var searchInput by remember { mutableStateOf("") }
     var filterFavorites by remember { mutableStateOf(false) }
+    var ruleToDelete by remember { mutableStateOf<GrammarRuleEntity?>(null) }
+
+    ruleToDelete?.let { r ->
+        AlertDialog(
+            onDismissRequest = { ruleToDelete = null },
+            title = { Text("Delete Grammar Rule?") },
+            text = { Text("Are you sure you want to delete '${r.title}'? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteRule(r.id)
+                        ruleToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { ruleToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -190,12 +226,25 @@ fun GrammarScreen(
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    IconButton(onClick = { viewModel.toggleFavorite(rule.id, !rule.isFavorite) }) {
-                                        Icon(
-                                            imageVector = if (rule.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                            contentDescription = "Favorite",
-                                            tint = if (rule.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
-                                        )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = { viewModel.toggleFavorite(rule.id, !rule.isFavorite) }) {
+                                            Icon(
+                                                imageVector = if (rule.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                                contentDescription = "Favorite",
+                                                tint = if (rule.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { ruleToDelete = rule },
+                                            modifier = Modifier.size(32.dp).testTag("grammar_delete_btn")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DeleteOutline,
+                                                contentDescription = "Delete Rule",
+                                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
                                     }
                                 }
 

@@ -149,4 +149,25 @@ class DailyLearnViewModel(application: Application) : AndroidViewModel(applicati
             vocabRepo.recordReview(wordId, remembered, _uiState.value.date)
         }
     }
+
+    fun deleteWord(wordId: String) {
+        viewModelScope.launch {
+            vocabRepo.deleteWord(wordId)
+            loadDay(_uiState.value.date)
+        }
+    }
+
+    fun deleteGrammarRule(ruleId: String) {
+        viewModelScope.launch {
+            grammarRepo.deleteRule(ruleId)
+            loadDay(_uiState.value.date)
+        }
+    }
+
+    fun deletePhrase(phraseId: String) {
+        viewModelScope.launch {
+            phraseRepo.deletePhrase(phraseId)
+            loadDay(_uiState.value.date)
+        }
+    }
 }

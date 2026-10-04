@@ -28,6 +28,10 @@ class EditorialRepository(private val editorialDao: EditorialDao) {
 
     suspend fun deleteEditorial(id: String) = editorialDao.deleteEditorial(id)
 
+    suspend fun deleteEditorialByDate(date: String) = editorialDao.deleteEditorialByDate(date)
+
+    suspend fun deleteAllEditorials() = editorialDao.deleteAllEditorials()
+
     fun getFavoriteEditorials(): Flow<List<EditorialEntity>> = editorialDao.getFavoriteEditorials()
 
     fun searchEditorials(query: String): Flow<List<EditorialEntity>> = editorialDao.searchEditorials(query)

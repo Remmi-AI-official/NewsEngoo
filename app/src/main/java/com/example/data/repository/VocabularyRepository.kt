@@ -115,7 +115,25 @@ class VocabularyRepository(private val vocabularyDao: VocabularyDao) {
 
     suspend fun saveWord(word: VocabularyEntity) = vocabularyDao.insertWord(word)
 
-    suspend fun deleteWord(wordId: String) = vocabularyDao.deleteWord(wordId)
+    suspend fun deleteWord(wordId: String) {
+        vocabularyDao.clearCategoriesForWord(wordId)
+        vocabularyDao.deleteWord(wordId)
+    }
+
+    suspend fun deleteWords(wordIds: List<String>) {
+        for (id in wordIds) {
+            vocabularyDao.clearCategoriesForWord(id)
+        }
+        vocabularyDao.deleteWords(wordIds)
+    }
+
+    suspend fun deleteAllWords() {
+        vocabularyDao.deleteAllWords()
+    }
+
+    suspend fun deleteWordsForDate(date: String) {
+        vocabularyDao.deleteEditorialVocabCrossRefsForDate(date)
+    }
 
     fun getTotalCount(): Flow<Int> = vocabularyDao.getTotalWordsCount()
 

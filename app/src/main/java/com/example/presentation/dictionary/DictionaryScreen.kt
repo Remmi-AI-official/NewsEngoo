@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
@@ -53,6 +55,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -103,6 +106,8 @@ fun DictionaryScreen(
     // Dialog & Sheet States
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showBatchFolderPicker by remember { mutableStateOf(false) }
+    var showDeleteSelectedDialog by remember { mutableStateOf(false) }
+    var wordToDelete by remember { mutableStateOf<VocabularyEntity?>(null) }
     var wordForQuickFolder by remember { mutableStateOf<VocabularyEntity?>(null) }
 
     // New folder form state
@@ -158,7 +163,7 @@ fun DictionaryScreen(
                             onClick = { showBatchFolderPicker = true },
                             enabled = uiState.selectedWordIds.isNotEmpty(),
                             modifier = Modifier
-                                .padding(end = 8.dp)
+                                .padding(end = 4.dp)
                                 .testTag("batch_add_to_folder_btn"),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
@@ -167,7 +172,23 @@ fun DictionaryScreen(
                         ) {
                             Icon(imageVector = Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add to Folder", fontSize = 12.sp)
+                            Text("Folder", fontSize = 12.sp)
+                        }
+
+                        Button(
+                            onClick = { showDeleteSelectedDialog = true },
+                            enabled = uiState.selectedWordIds.isNotEmpty(),
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .testTag("batch_delete_words_btn"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Delete (${uiState.selectedWordIds.size})", fontSize = 12.sp)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -497,6 +518,9 @@ fun DictionaryScreen(
                                 },
                                 onManageFolderClick = {
                                     wordForQuickFolder = word
+                                },
+                                onDeleteClick = {
+                                    wordToDelete = word
                                 }
                             )
                         }
@@ -507,6 +531,57 @@ fun DictionaryScreen(
                     }
                 }
             }
+        }
+
+        // Dialog: Delete Single Word
+        if (wordToDelete != null) {
+            val word = wordToDelete!!
+            AlertDialog(
+                onDismissRequest = { wordToDelete = null },
+                title = { Text("Delete '${word.word}'?") },
+                text = { Text("Are you sure you want to delete this word from your dictionary? This will also remove it from any assigned subject folders.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteWord(word.id)
+                            wordToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(onClick = { wordToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Dialog: Delete Selected Words Batch
+        if (showDeleteSelectedDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteSelectedDialog = false },
+                title = { Text("Delete ${uiState.selectedWordIds.size} Words?") },
+                text = { Text("Are you sure you want to permanently delete these ${uiState.selectedWordIds.size} selected words from your dictionary?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDeleteSelectedDialog = false
+                            viewModel.deleteSelectedWords()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete All")
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(onClick = { showDeleteSelectedDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
 
         // Dialog: Quick Create Subject Folder
@@ -637,7 +712,8 @@ fun DictionaryWordCard(
     onLongClick: () -> Unit,
     onToggleSelect: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onManageFolderClick: () -> Unit
+    onManageFolderClick: () -> Unit,
+    onDeleteClick: () -> Unit = {}
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -722,6 +798,18 @@ fun DictionaryWordCard(
                                 imageVector = if (word.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "Favorite",
                                 tint = if (word.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onDeleteClick,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Delete Word",
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                                 modifier = Modifier.size(20.dp)
                             )
                         }

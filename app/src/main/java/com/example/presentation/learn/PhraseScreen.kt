@@ -8,15 +8,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -25,6 +30,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -86,6 +92,12 @@ class PhraseViewModel(private val app: EditorialApplication) : ViewModel() {
             phraseRepo.toggleFavorite(id, fav)
         }
     }
+
+    fun deletePhrase(id: String) {
+        viewModelScope.launch {
+            phraseRepo.deletePhrase(id)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +110,31 @@ fun PhraseScreen(
     val phrases by viewModel.phrases.collectAsState()
     var searchInput by remember { mutableStateOf("") }
     var filterFavorites by remember { mutableStateOf(false) }
+    var phraseToDelete by remember { mutableStateOf<com.example.data.local.entity.PhraseEntity?>(null) }
+
+    phraseToDelete?.let { p ->
+        AlertDialog(
+            onDismissRequest = { phraseToDelete = null },
+            title = { Text("Delete Expression?") },
+            text = { Text("Are you sure you want to delete '${p.phrase}'? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deletePhrase(p.id)
+                        phraseToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { phraseToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -186,12 +223,25 @@ fun PhraseScreen(
                                         color = MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    IconButton(onClick = { viewModel.toggleFavorite(item.id, !item.isFavorite) }) {
-                                        Icon(
-                                            imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                            contentDescription = "Favorite",
-                                            tint = if (item.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
-                                        )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = { viewModel.toggleFavorite(item.id, !item.isFavorite) }) {
+                                            Icon(
+                                                imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                                contentDescription = "Favorite",
+                                                tint = if (item.isFavorite) Color(0xFFE53E3E) else MaterialTheme.colorScheme.outlineVariant
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { phraseToDelete = item },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DeleteOutline,
+                                                contentDescription = "Delete Expression",
+                                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
                                     }
                                 }
 

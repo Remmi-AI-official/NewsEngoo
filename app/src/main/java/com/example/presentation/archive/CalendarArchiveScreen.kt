@@ -27,12 +27,15 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Today
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -52,6 +55,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +69,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.data.local.entity.EditorialEntity
 import com.example.domain.model.DateUtils
 import com.example.presentation.components.EditorialTopBar
 import com.example.presentation.components.EmptyStateView
@@ -78,6 +85,32 @@ fun CalendarArchiveScreen(
     viewModel: ArchiveViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    var editorialToDelete by remember { mutableStateOf<EditorialEntity?>(null) }
+
+    editorialToDelete?.let { ed ->
+        AlertDialog(
+            onDismissRequest = { editorialToDelete = null },
+            title = { Text("Delete Editorial?") },
+            text = { Text("Are you sure you want to delete '${ed.title}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteEditorial(ed.id)
+                        editorialToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { editorialToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -109,6 +142,7 @@ fun CalendarArchiveScreen(
                 onChangeMonth = { viewModel.changeMonth(it) },
                 onNavigateToReader = onNavigateToReader,
                 onNavigateToLearnFlow = onNavigateToLearnFlow,
+                onDeleteEditorial = { editorialToDelete = it },
                 modifier = Modifier.padding(innerPadding)
             )
         } else {
@@ -117,6 +151,7 @@ fun CalendarArchiveScreen(
                 onToggleFavoriteFilter = { viewModel.toggleFavoriteFilter() },
                 onToggleCompletedFilter = { viewModel.toggleCompletedFilter() },
                 onSelectEditorial = { onNavigateToReader(it.id) },
+                onDeleteEditorial = { editorialToDelete = it },
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -130,6 +165,7 @@ fun CalendarViewContent(
     onChangeMonth: (Int) -> Unit,
     onNavigateToReader: (String) -> Unit,
     onNavigateToLearnFlow: (String) -> Unit,
+    onDeleteEditorial: (com.example.data.local.entity.EditorialEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -274,20 +310,38 @@ fun CalendarViewContent(
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     if (summary.editorial != null) {
-                        Text(
-                            text = summary.editorial.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontFamily = FontFamily.Serif,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "${summary.editorial.source} • ${summary.editorial.readTimeMinutes} min read",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = summary.editorial.title,
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontFamily = FontFamily.Serif,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "${summary.editorial.source} • ${summary.editorial.readTimeMinutes} min read",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { onDeleteEditorial(summary.editorial) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteOutline,
+                                    contentDescription = "Delete Editorial",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                     }
 
@@ -351,6 +405,7 @@ fun ListViewContent(
     onToggleFavoriteFilter: () -> Unit,
     onToggleCompletedFilter: () -> Unit,
     onSelectEditorial: (com.example.data.local.entity.EditorialEntity) -> Unit,
+    onDeleteEditorial: (com.example.data.local.entity.EditorialEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val filtered = uiState.allEditorials.filter { ed ->
@@ -401,7 +456,8 @@ fun ListViewContent(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = DateUtils.formatDate(ed.date),
@@ -409,8 +465,22 @@ fun ListViewContent(
                                     color = MaterialTheme.colorScheme.secondary,
                                     fontWeight = FontWeight.Bold
                                 )
-                                if (ed.isFavorite) {
-                                    Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFE53E3E), modifier = Modifier.size(16.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (ed.isFavorite) {
+                                        Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFE53E3E), modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    IconButton(
+                                        onClick = { onDeleteEditorial(ed) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteOutline,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
                             Spacer(modifier = Modifier.height(4.dp))

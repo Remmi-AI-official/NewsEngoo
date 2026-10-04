@@ -79,6 +79,28 @@ class PracticeTestRepository(
 
     suspend fun deleteMistake(id: String) = mistakeDao.deleteMistake(id)
 
+    suspend fun deleteTest(testId: String) {
+        testDao.deleteTestQuestionRefs(testId)
+        testDao.deleteTest(testId)
+    }
+
+    suspend fun deleteTestsForDate(date: String) {
+        testDao.deleteTestsForDate(date)
+        testDao.deleteQuestionsForDate(date)
+    }
+
+    suspend fun deleteAllTests() {
+        testDao.deleteAllTests()
+    }
+
+    suspend fun deleteAllQuestions() {
+        testDao.deleteAllQuestions()
+    }
+
+    suspend fun deleteQuestion(questionId: String) {
+        testDao.deleteQuestion(questionId)
+    }
+
     /**
      * Evaluates a completed test, records the attempt, and logs mistakes.
      */

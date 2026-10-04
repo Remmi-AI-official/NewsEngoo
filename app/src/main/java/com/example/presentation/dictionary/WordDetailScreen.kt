@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -84,8 +86,33 @@ fun WordDetailScreen(
     var noteInput by remember(word?.personalNote) { mutableStateOf(word?.personalNote ?: "") }
     var showCategorySelector by remember { mutableStateOf(false) }
     var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var showDeleteWordDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var newFolderDesc by remember { mutableStateOf("") }
+
+    if (showDeleteWordDialog && word != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteWordDialog = false },
+            title = { Text("Delete '${word.word}'?") },
+            text = { Text("Are you sure you want to delete this word from your dictionary? This will also remove it from any assigned folders.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteWordDialog = false
+                        viewModel.deleteWord { onNavigateBack() }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteWordDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -106,6 +133,16 @@ fun WordDetailScreen(
                             imageVector = if (word?.isFavorite == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite",
                             tint = if (word?.isFavorite == true) Color(0xFFE53E3E) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(
+                        onClick = { showDeleteWordDialog = true },
+                        modifier = Modifier.testTag("word_detail_delete_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete Word",
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 },

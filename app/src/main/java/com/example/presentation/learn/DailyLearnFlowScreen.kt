@@ -27,11 +27,13 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.NavigateBefore
 import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -54,6 +56,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,7 +69,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.data.local.entity.GrammarRuleEntity
+import com.example.data.local.entity.PhraseEntity
+import com.example.data.local.entity.VocabularyEntity
 import com.example.domain.model.DateUtils
+
+data class DeleteConfirmItem(
+    val type: String,
+    val name: String,
+    val onConfirm: () -> Unit
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +97,32 @@ fun DailyLearnFlowScreen(
 
     BackHandler {
         onNavigateBack()
+    }
+
+    var itemToDelete by remember { mutableStateOf<DeleteConfirmItem?>(null) }
+
+    itemToDelete?.let { item ->
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            title = { Text("Delete ${item.type}?") },
+            text = { Text("Are you sure you want to delete '${item.name}'? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        item.onConfirm()
+                        itemToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { itemToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -168,15 +208,18 @@ fun DailyLearnFlowScreen(
                         uiState = uiState,
                         onNextVocab = { viewModel.nextVocab() },
                         onPrevVocab = { viewModel.prevVocab() },
-                        onMarkReviewed = { id, remembered -> viewModel.markWordReviewed(id, remembered) }
+                        onMarkReviewed = { id, remembered -> viewModel.markWordReviewed(id, remembered) },
+                        onDeleteWord = { w -> itemToDelete = DeleteConfirmItem("Word", w.word) { viewModel.deleteWord(w.id) } }
                     )
                     LearnStep.GRAMMAR -> StepGrammar(
                         uiState = uiState,
-                        onNextRule = { viewModel.nextGrammar() }
+                        onNextRule = { viewModel.nextGrammar() },
+                        onDeleteRule = { r -> itemToDelete = DeleteConfirmItem("Grammar Rule", r.title) { viewModel.deleteGrammarRule(r.id) } }
                     )
                     LearnStep.EXPRESSIONS -> StepExpressions(
                         uiState = uiState,
-                        onNextPhrase = { viewModel.nextPhrase() }
+                        onNextPhrase = { viewModel.nextPhrase() },
+                        onDeletePhrase = { p -> itemToDelete = DeleteConfirmItem("Expression", p.phrase) { viewModel.deletePhrase(p.id) } }
                     )
                     LearnStep.PRACTICE -> StepPractice(
                         uiState = uiState,
@@ -272,7 +315,8 @@ fun StepVocabulary(
     uiState: DailyLearnUiState,
     onNextVocab: () -> Unit,
     onPrevVocab: () -> Unit,
-    onMarkReviewed: (String, Boolean) -> Unit
+    onMarkReviewed: (String, Boolean) -> Unit,
+    onDeleteWord: (VocabularyEntity) -> Unit = {}
 ) {
     val words = uiState.vocabulary
     if (words.isEmpty()) {
@@ -296,16 +340,30 @@ fun StepVocabulary(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Word ${index + 1} of ${words.size}", style = MaterialTheme.typography.labelLarge)
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(6.dp)
-            ) {
-                Text(
-                    text = word.learningStatus,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = word.learningStatus,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                IconButton(
+                    onClick = { onDeleteWord(word) },
+                    modifier = Modifier.size(32.dp).testTag("learn_delete_word_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Delete Word",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
 
@@ -388,7 +446,8 @@ fun StepVocabulary(
 @Composable
 fun StepGrammar(
     uiState: DailyLearnUiState,
-    onNextRule: () -> Unit
+    onNextRule: () -> Unit,
+    onDeleteRule: (GrammarRuleEntity) -> Unit = {}
 ) {
     val rules = uiState.grammarRules
     if (rules.isEmpty()) {
@@ -405,7 +464,29 @@ fun StepGrammar(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Rule ${index + 1} of ${rules.size}: ${rule.title}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Rule ${index + 1} of ${rules.size}: ${rule.title}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = { onDeleteRule(rule) },
+                modifier = Modifier.size(32.dp).testTag("learn_delete_rule_btn")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Delete Rule",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
 
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
@@ -450,7 +531,8 @@ fun StepGrammar(
 @Composable
 fun StepExpressions(
     uiState: DailyLearnUiState,
-    onNextPhrase: () -> Unit
+    onNextPhrase: () -> Unit,
+    onDeletePhrase: (PhraseEntity) -> Unit = {}
 ) {
     val phrases = uiState.phrases
     if (phrases.isEmpty()) {
@@ -467,7 +549,28 @@ fun StepExpressions(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Expression ${index + 1} of ${phrases.size}", style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Expression ${index + 1} of ${phrases.size}",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = { onDeletePhrase(phrase) },
+                modifier = Modifier.size(32.dp).testTag("learn_delete_phrase_btn")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Delete Expression",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
 
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),

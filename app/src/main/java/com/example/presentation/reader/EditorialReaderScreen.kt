@@ -23,17 +23,21 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -109,11 +113,36 @@ fun EditorialReaderScreen(
     }
 
     var showNoteDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var noteInput by remember(uiState.editorial?.personalNote) {
         mutableStateOf(uiState.editorial?.personalNote ?: "")
     }
 
     val editorial = uiState.editorial
+
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Delete Editorial?") },
+            text = { Text("Are you sure you want to delete this editorial article? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        viewModel.deleteEditorial { onNavigateBack() }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -171,6 +200,17 @@ fun EditorialReaderScreen(
                             }
                         }) {
                             Icon(imageVector = Icons.Default.Share, contentDescription = "Share")
+                        }
+                        // Delete Editorial
+                        IconButton(
+                            onClick = { showDeleteConfirmDialog = true },
+                            modifier = Modifier.testTag("reader_delete_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Delete Editorial",
+                                tint = MaterialTheme.colorScheme.error
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(

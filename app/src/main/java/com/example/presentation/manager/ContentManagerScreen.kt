@@ -27,10 +27,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -81,7 +87,7 @@ fun ContentManagerScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Import, 1: Backup & Restore, 2: History
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Import, 1: Manage & Delete, 2: Backup & Restore, 3: History
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -104,14 +110,16 @@ fun ContentManagerScreen(
         ) {
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Import") })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Backup") })
-                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("History") })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Manage & Delete") })
+                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Backup") })
+                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("History") })
             }
 
             when (selectedTab) {
                 0 -> ImportTabContent(uiState = uiState, viewModel = viewModel)
-                1 -> BackupTabContent(uiState = uiState, viewModel = viewModel, context = context)
-                2 -> HistoryTabContent(uiState = uiState)
+                1 -> ManageDeleteTabContent(uiState = uiState, viewModel = viewModel)
+                2 -> BackupTabContent(uiState = uiState, viewModel = viewModel, context = context)
+                3 -> HistoryTabContent(uiState = uiState)
             }
         }
     }
@@ -596,5 +604,429 @@ By combining supply chain resilience with domestic consumption, the country is w
     }
   ]
 }"""
+    }
+}
+
+data class DeleteConfirmTarget(
+    val title: String,
+    val message: String,
+    val onConfirm: () -> Unit
+)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ManageDeleteTabContent(
+    uiState: ContentManagerUiState,
+    viewModel: ContentManagerViewModel
+) {
+    val editorials by viewModel.allEditorials.collectAsState()
+    val words by viewModel.allVocabWords.collectAsState()
+    val rules by viewModel.allGrammarRules.collectAsState()
+    val phrases by viewModel.allPhrases.collectAsState()
+    val tests by viewModel.allTests.collectAsState()
+
+    var selectedFilter by remember { mutableStateOf("All") }
+    var searchQuery by remember { mutableStateOf("") }
+    var dateToDelete by remember { mutableStateOf(DateUtils.getTodayDate()) }
+    var confirmDialog by remember { mutableStateOf<DeleteConfirmTarget?>(null) }
+
+    confirmDialog?.let { target ->
+        AlertDialog(
+            onDismissRequest = { confirmDialog = null },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(target.title) },
+            text = { Text(target.message) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        target.onConfirm()
+                        confirmDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { confirmDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Success / Error Banners
+        if (uiState.lastSuccessMessage != null) {
+            Surface(
+                color = Color(0xFFE6FFFA),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF234E52), modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = uiState.lastSuccessMessage, color = Color(0xFF234E52), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
+        // Section 1: Delete Complete Package by Date
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Delete Content By Date", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Text(
+                    text = "Deletes editorial, linked words, grammar rules, expressions, and practice questions for the specified date in one go.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = dateToDelete,
+                        onValueChange = { dateToDelete = it },
+                        label = { Text("Date (YYYY-MM-DD)") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    Button(
+                        onClick = {
+                            confirmDialog = DeleteConfirmTarget(
+                                title = "Delete Content for $dateToDelete?",
+                                message = "Are you sure you want to delete all editorial, grammar, vocabulary links, phrases, and test questions for date $dateToDelete?",
+                                onConfirm = { viewModel.deleteContentByDate(dateToDelete.trim()) }
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.padding(top = 6.dp)
+                    ) {
+                        Text("Delete Date")
+                    }
+                }
+            }
+        }
+
+        // Section 2: Interactive Individual Content Manager
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Browse & Delete Specific Items", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by title, word, rule...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true
+                )
+
+                // Filter Chips
+                val filterOptions = listOf("All", "Editorials (${editorials.size})", "Vocab (${words.size})", "Grammar (${rules.size})", "Phrases (${phrases.size})", "Tests (${tests.size})")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    filterOptions.forEach { opt ->
+                        val key = opt.substringBefore(" (")
+                        FilterChip(
+                            selected = selectedFilter == key,
+                            onClick = { selectedFilter = key },
+                            label = { Text(opt, fontSize = 12.sp) }
+                        )
+                    }
+                }
+
+                HorizontalDivider()
+
+                val q = searchQuery.trim().lowercase()
+
+                // Editorials List
+                if (selectedFilter == "All" || selectedFilter == "Editorials") {
+                    val filteredEd = editorials.filter { q.isEmpty() || it.title.lowercase().contains(q) || it.date.contains(q) }
+                    if (filteredEd.isNotEmpty()) {
+                        Text("Editorials (${filteredEd.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        filteredEd.take(15).forEach { ed ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(ed.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        Text("Date: ${ed.date} • ${ed.source}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            confirmDialog = DeleteConfirmTarget(
+                                                title = "Delete Editorial?",
+                                                message = "Delete editorial '${ed.title}'?",
+                                                onConfirm = { viewModel.deleteEditorial(ed.id) }
+                                            )
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Vocab List
+                if (selectedFilter == "All" || selectedFilter == "Vocab") {
+                    val filteredWords = words.filter { q.isEmpty() || it.word.lowercase().contains(q) || it.meaning.lowercase().contains(q) }
+                    if (filteredWords.isNotEmpty()) {
+                        Text("Vocabulary (${filteredWords.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        filteredWords.take(15).forEach { w ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(w.word, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                        Text(w.meaning, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                                        if (w.hindiMeaning.isNotBlank()) {
+                                            Text("Hindi: ${w.hindiMeaning}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                                        }
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            confirmDialog = DeleteConfirmTarget(
+                                                title = "Delete Word '${w.word}'?",
+                                                message = "Delete word '${w.word}' from vocabulary?",
+                                                onConfirm = { viewModel.deleteWord(w.id) }
+                                            )
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Grammar List
+                if (selectedFilter == "All" || selectedFilter == "Grammar") {
+                    val filteredRules = rules.filter { q.isEmpty() || it.title.lowercase().contains(q) || it.rule.lowercase().contains(q) }
+                    if (filteredRules.isNotEmpty()) {
+                        Text("Grammar Rules (${filteredRules.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        filteredRules.take(15).forEach { r ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(r.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        Text(r.rule, style = MaterialTheme.typography.bodySmall, maxLines = 1, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            confirmDialog = DeleteConfirmTarget(
+                                                title = "Delete Grammar Rule?",
+                                                message = "Delete rule '${r.title}'?",
+                                                onConfirm = { viewModel.deleteGrammarRule(r.id) }
+                                            )
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Phrases List
+                if (selectedFilter == "All" || selectedFilter == "Phrases") {
+                    val filteredPhrases = phrases.filter { q.isEmpty() || it.phrase.lowercase().contains(q) || it.meaning.lowercase().contains(q) }
+                    if (filteredPhrases.isNotEmpty()) {
+                        Text("Phrases & Idioms (${filteredPhrases.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        filteredPhrases.take(15).forEach { p ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(p.phrase, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                        Text(p.meaning, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            confirmDialog = DeleteConfirmTarget(
+                                                title = "Delete Expression?",
+                                                message = "Delete expression '${p.phrase}'?",
+                                                onConfirm = { viewModel.deletePhrase(p.id) }
+                                            )
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Tests List
+                if (selectedFilter == "All" || selectedFilter == "Tests") {
+                    val filteredTests = tests.filter { q.isEmpty() || it.title.lowercase().contains(q) || it.date.contains(q) }
+                    if (filteredTests.isNotEmpty()) {
+                        Text("Practice Tests (${filteredTests.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        filteredTests.take(15).forEach { t ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(t.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        Text("${t.type.uppercase()} • Date: ${t.date} • ${t.totalQuestions} Questions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            confirmDialog = DeleteConfirmTarget(
+                                                title = "Delete Practice Test?",
+                                                message = "Delete test '${t.title}'?",
+                                                onConfirm = { viewModel.deleteTest(t.id) }
+                                            )
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 3: Bulk Reset / Clear Database Options
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Bulk Reset Options", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                Text("Use these buttons to wipe clean specific tables across all dates.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            confirmDialog = DeleteConfirmTarget(
+                                title = "Clear All Editorials?",
+                                message = "Are you sure you want to delete ALL editorials in the app?",
+                                onConfirm = { viewModel.clearAllEditorials() }
+                            )
+                        }
+                    ) {
+                        Text("Clear Editorials", color = MaterialTheme.colorScheme.error)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            confirmDialog = DeleteConfirmTarget(
+                                title = "Clear All Vocabulary Words?",
+                                message = "Are you sure you want to delete ALL vocabulary words and folders?",
+                                onConfirm = { viewModel.clearAllVocabulary() }
+                            )
+                        }
+                    ) {
+                        Text("Clear Vocabulary", color = MaterialTheme.colorScheme.error)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            confirmDialog = DeleteConfirmTarget(
+                                title = "Clear All Grammar Rules?",
+                                message = "Are you sure you want to delete ALL grammar rules in the library?",
+                                onConfirm = { viewModel.clearAllGrammar() }
+                            )
+                        }
+                    ) {
+                        Text("Clear Grammar", color = MaterialTheme.colorScheme.error)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            confirmDialog = DeleteConfirmTarget(
+                                title = "Clear All Phrases & Idioms?",
+                                message = "Are you sure you want to delete ALL phrases and idioms?",
+                                onConfirm = { viewModel.clearAllPhrases() }
+                            )
+                        }
+                    ) {
+                        Text("Clear Phrases", color = MaterialTheme.colorScheme.error)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            confirmDialog = DeleteConfirmTarget(
+                                title = "Clear All Tests & Questions?",
+                                message = "Are you sure you want to delete ALL practice tests and question banks?",
+                                onConfirm = { viewModel.clearAllTests() }
+                            )
+                        }
+                    ) {
+                        Text("Clear Tests", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
     }
 }

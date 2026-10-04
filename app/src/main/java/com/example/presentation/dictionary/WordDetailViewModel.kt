@@ -106,4 +106,13 @@ class WordDetailViewModel(application: Application) : AndroidViewModel(applicati
             )
         }
     }
+
+    fun deleteWord(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            if (currentWordId.isNotBlank()) {
+                vocabRepo.deleteWord(currentWordId)
+                onDeleted()
+            }
+        }
+    }
 }

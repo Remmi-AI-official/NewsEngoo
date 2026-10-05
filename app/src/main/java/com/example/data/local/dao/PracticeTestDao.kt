@@ -16,6 +16,9 @@ interface PracticeTestDao {
     @Query("SELECT * FROM questions WHERE date = :date ORDER BY createdAt ASC")
     fun getQuestionsForDate(date: String): Flow<List<QuestionEntity>>
 
+    @Query("SELECT * FROM questions WHERE date = :date ORDER BY id ASC")
+    suspend fun getQuestionsForDateSync(date: String): List<QuestionEntity>
+
     @Query("SELECT * FROM questions ORDER BY date DESC")
     fun getAllQuestions(): Flow<List<QuestionEntity>>
 
@@ -115,6 +118,9 @@ interface PracticeTestDao {
 
     @Query("SELECT * FROM test_attempts WHERE testId = :testId ORDER BY completedAt DESC")
     fun getAttemptsForTest(testId: String): Flow<List<TestAttemptEntity>>
+
+    @Query("SELECT * FROM test_attempts WHERE testId = :testId ORDER BY completedAt DESC LIMIT 1")
+    suspend fun getLatestAttemptForTestSync(testId: String): TestAttemptEntity?
 
     @Query("SELECT * FROM test_attempts WHERE id = :attemptId LIMIT 1")
     fun getAttemptById(attemptId: String): Flow<TestAttemptEntity?>

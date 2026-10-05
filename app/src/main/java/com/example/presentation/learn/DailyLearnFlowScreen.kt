@@ -24,11 +24,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -38,6 +41,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -434,6 +438,7 @@ fun DailyLearnFlowScreen(
                         uiState = uiState,
                         onSelectAnswer = { qId, ans -> viewModel.selectPracticeAnswer(qId, ans) },
                         onSubmit = { viewModel.submitPractice() },
+                        onReattempt = { viewModel.reattemptPractice() },
                         onProceedToTest = { viewModel.setStep(LearnStep.TEST) },
                         onOpenContextMenu = { questionContextMenu = it }
                     )
@@ -1321,6 +1326,7 @@ fun StepPractice(
     uiState: DailyLearnUiState,
     onSelectAnswer: (String, Int) -> Unit,
     onSubmit: () -> Unit,
+    onReattempt: () -> Unit,
     onProceedToTest: () -> Unit,
     onOpenContextMenu: (QuestionEntity) -> Unit
 ) {
@@ -1344,13 +1350,83 @@ fun StepPractice(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Step 5: Practice Questions (Hold card for options)",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Step 5: Practice Questions",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            if (uiState.practiceSubmitted) {
+                FilledTonalButton(
+                    onClick = onReattempt,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Reattempt")
+                }
+            }
+        }
+
+        // Previous Report Banner if submitted
+        if (uiState.practiceSubmitted) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Practice Result Report",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            val accuracyPercent = if (questions.isNotEmpty()) {
+                                (uiState.practiceScore.toFloat() / questions.size) * 100f
+                            } else 0f
+                            Text(
+                                text = "Score: ${uiState.practiceScore}/${questions.size} (${accuracyPercent.toInt()}% Accuracy)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Surface(
+                            color = if (uiState.practiceScore >= (questions.size / 2)) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Text(
+                                text = if (uiState.practiceScore >= (questions.size / 2)) "COMPLETED" else "NEEDS REVIEW",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         questions.forEachIndexed { qIdx, q ->
+            val selectedAns = uiState.practiceAnswers[q.id]
+            val isAnswered = selectedAns != null
+            val isCorrect = selectedAns == q.correctAnswerIndex
+
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1362,6 +1438,67 @@ fun StepPractice(
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = q.topic.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+
+                        if (uiState.practiceSubmitted) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isCorrect) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Correct",
+                                        tint = Color(0xFF2E7D32),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Correct",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF2E7D32)
+                                    )
+                                } else if (isAnswered) {
+                                    Icon(
+                                        imageVector = Icons.Default.Cancel,
+                                        contentDescription = "Incorrect",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Incorrect",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Skipped",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     Text(
                         text = "Q${qIdx + 1}. ${q.question}",
                         style = MaterialTheme.typography.bodyLarge,
@@ -1369,7 +1506,6 @@ fun StepPractice(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    val selectedAns = uiState.practiceAnswers[q.id]
                     q.options.forEachIndexed { optIdx, opt ->
                         val isSelected = selectedAns == optIdx
                         val isCorrectOption = optIdx == q.correctAnswerIndex
@@ -1391,21 +1527,51 @@ fun StepPractice(
                                     onSelectAnswer(q.id, optIdx)
                                 }
                         ) {
-                            Text(
-                                text = opt,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = opt,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (uiState.practiceSubmitted) {
+                                    if (isCorrectOption) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = Color(0xFF2E7D32),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    } else if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Cancel,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
                     if (uiState.practiceSubmitted && q.explanation.isNotBlank()) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Explanation: ${q.explanation}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "💡 Explanation: ${q.explanation}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -1416,11 +1582,11 @@ fun StepPractice(
                 onClick = onSubmit,
                 modifier = Modifier.fillMaxWidth().testTag("submit_practice_btn")
             ) {
-                Text("Check Answers")
+                Text("Check Answers & Save Result")
             }
         } else {
             Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -1430,9 +1596,25 @@ fun StepPractice(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = onProceedToTest) {
-                        Text("Proceed to Daily Test →")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onReattempt,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Reattempt")
+                        }
+                        Button(
+                            onClick = onProceedToTest,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Daily Test →")
+                        }
                     }
                 }
             }

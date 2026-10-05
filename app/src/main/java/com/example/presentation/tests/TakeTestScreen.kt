@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -90,13 +91,21 @@ fun TakeTestScreen(
     // If submitted, navigate to result
     LaunchedEffect(activeState.isSubmitted, activeState.result) {
         val result = activeState.result
-        if (activeState.isSubmitted && result != null) {
-            onTestFinished(result.attemptId)
+        if (activeState.isSubmitted) {
+            if (result != null) {
+                onTestFinished(result.attemptId)
+            } else {
+                onNavigateBack()
+            }
         }
     }
 
     BackHandler {
-        showConfirmSubmit = true
+        if (activeState.questions.isEmpty()) {
+            onNavigateBack()
+        } else {
+            showConfirmSubmit = true
+        }
     }
 
     val questions = activeState.questions
@@ -115,7 +124,13 @@ fun TakeTestScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { showConfirmSubmit = true }) {
+                    IconButton(onClick = {
+                        if (questions.isEmpty()) {
+                            onNavigateBack()
+                        } else {
+                            showConfirmSubmit = true
+                        }
+                    }) {
                         Icon(imageVector = Icons.Default.Close, contentDescription = "Exit Test")
                     }
                 },
@@ -152,7 +167,43 @@ fun TakeTestScreen(
             )
         }
     ) { innerPadding ->
-        if (currentQuestion != null) {
+        if (questions.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Quiz,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(64.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "No Questions in this Test",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "No questions are currently loaded for this test. Please check back after daily content is loaded.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = onNavigateBack,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Go Back")
+                }
+            }
+        } else if (currentQuestion != null) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -330,23 +381,40 @@ fun TakeTestScreen(
 
             AlertDialog(
                 onDismissRequest = { showConfirmSubmit = false },
-                title = { Text("Submit Examination?") },
+                title = { Text(if (totalCount == 0) "Exit Examination?" else "Submit Examination?") },
                 text = {
-                    Text("You have answered $answeredCount out of $totalCount questions. Are you ready to submit and calculate your score?")
+                    if (totalCount == 0) {
+                        Text("No questions are loaded for this test. Do you want to exit?")
+                    } else {
+                        Text("You have answered $answeredCount out of $totalCount questions. Are you ready to submit and calculate your score?")
+                    }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             showConfirmSubmit = false
-                            viewModel.submitActiveTest()
+                            if (totalCount == 0 || activeState.test == null) {
+                                onNavigateBack()
+                            } else {
+                                viewModel.submitActiveTest()
+                            }
                         }
                     ) {
-                        Text("Yes, Submit")
+                        Text(if (totalCount == 0) "Exit" else "Yes, Submit")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showConfirmSubmit = false }) {
-                        Text("Continue Test")
+                    Row {
+                        TextButton(onClick = {
+                            showConfirmSubmit = false
+                            onNavigateBack()
+                        }) {
+                            Text("Exit Test", color = MaterialTheme.colorScheme.error)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        TextButton(onClick = { showConfirmSubmit = false }) {
+                            Text("Continue")
+                        }
                     }
                 }
             )

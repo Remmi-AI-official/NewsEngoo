@@ -11,6 +11,7 @@ import com.example.data.local.entity.PhraseEntity
 import com.example.data.local.entity.QuestionEntity
 import com.example.data.local.entity.VocabularyEntity
 import com.example.domain.model.DateUtils
+import org.json.JSONArray
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +43,7 @@ data class DailyLearnUiState(
     val practiceAnswers: Map<String, Int> = emptyMap(),
     val practiceSubmitted: Boolean = false,
     val practiceScore: Int = 0,
+    val practiceAccuracy: Float = 0f,
     val progress: DailyProgressEntity? = null,
     val isLoading: Boolean = true
 )
@@ -58,14 +60,47 @@ class DailyLearnViewModel(application: Application) : AndroidViewModel(applicati
     private val _uiState = MutableStateFlow(DailyLearnUiState())
     val uiState: StateFlow<DailyLearnUiState> = _uiState.asStateFlow()
 
+    private fun parseAnswersJson(jsonStr: String): Map<String, Int> {
+        val result = mutableMapOf<String, Int>()
+        try {
+            val array = JSONArray(jsonStr)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                val qId = obj.optString("questionId")
+                val sel = obj.optInt("selected", -1)
+                if (qId.isNotBlank() && sel >= 0) {
+                    result[qId] = sel
+                }
+            }
+        } catch (_: Exception) {}
+        return result
+    }
+
     fun loadDay(date: String) {
         viewModelScope.launch {
             val editorial = editorialRepo.getEditorialByDate(date).first()
             val words = vocabRepo.getWordsForDate(date).first()
             val rules = grammarRepo.getRulesForDate(date).first()
             val phrases = phraseRepo.getPhrasesForDate(date).first()
-            val questions = testRepo.getQuestionsForDate(date).first()
+            var questions = testRepo.getQuestionsForDate(date).first()
+            if (questions.isEmpty()) {
+                val allQ = testRepo.getAllQuestions().first()
+                if (allQ.isNotEmpty()) {
+                    questions = allQ.take(15)
+                }
+            }
             val progress = progressRepo.getDailyProgress(date).first()
+
+            // Fetch previous saved practice attempt from database
+            val latestPracticeAttempt = testRepo.getLatestAttemptForTestSync("practice_$date")
+            val isSubmitted = latestPracticeAttempt != null
+            val savedAnswers = if (latestPracticeAttempt != null) {
+                parseAnswersJson(latestPracticeAttempt.answersJson)
+            } else {
+                emptyMap()
+            }
+            val score = latestPracticeAttempt?.score ?: 0
+            val accuracy = latestPracticeAttempt?.accuracy ?: 0f
 
             _uiState.value = DailyLearnUiState(
                 date = date,
@@ -74,6 +109,10 @@ class DailyLearnViewModel(application: Application) : AndroidViewModel(applicati
                 grammarRules = rules,
                 phrases = phrases,
                 questions = questions,
+                practiceAnswers = savedAnswers,
+                practiceSubmitted = isSubmitted,
+                practiceScore = score,
+                practiceAccuracy = accuracy,
                 progress = progress,
                 isLoading = false
             )
@@ -136,12 +175,32 @@ class DailyLearnViewModel(application: Application) : AndroidViewModel(applicati
 
     fun submitPractice() {
         val state = _uiState.value
-        var score = 0
-        state.questions.forEach { q ->
-            val ans = state.practiceAnswers[q.id]
-            if (ans == q.correctAnswerIndex) score++
+        val questions = state.questions
+        if (questions.isEmpty()) return
+
+        viewModelScope.launch {
+            val eval = testRepo.submitPracticeAttempt(
+                date = state.date,
+                questions = questions,
+                userAnswers = state.practiceAnswers
+            )
+            progressRepo.updatePracticeProgress(state.date, questions.size, questions.size)
+
+            _uiState.value = _uiState.value.copy(
+                practiceSubmitted = true,
+                practiceScore = eval.score,
+                practiceAccuracy = eval.accuracy
+            )
         }
-        _uiState.value = _uiState.value.copy(practiceSubmitted = true, practiceScore = score)
+    }
+
+    fun reattemptPractice() {
+        _uiState.value = _uiState.value.copy(
+            practiceSubmitted = false,
+            practiceAnswers = emptyMap(),
+            practiceScore = 0,
+            practiceAccuracy = 0f
+        )
     }
 
     fun markWordReviewed(wordId: String, remembered: Boolean) {

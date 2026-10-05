@@ -41,6 +41,8 @@ class PracticeTestRepository(
 ) {
     fun getQuestionsForDate(date: String): Flow<List<QuestionEntity>> = testDao.getQuestionsForDate(date)
 
+    suspend fun getQuestionsForDateSync(date: String): List<QuestionEntity> = testDao.getQuestionsForDateSync(date)
+
     fun getQuestionsForTest(testId: String): Flow<List<QuestionEntity>> = testDao.getQuestionsForTest(testId)
 
     suspend fun getQuestionsForTestSync(testId: String): List<QuestionEntity> =
@@ -59,6 +61,9 @@ class PracticeTestRepository(
     fun getAllAttempts(): Flow<List<TestAttemptEntity>> = testDao.getAllAttempts()
 
     fun getAttemptsForTest(testId: String): Flow<List<TestAttemptEntity>> = testDao.getAttemptsForTest(testId)
+
+    suspend fun getLatestAttemptForTestSync(testId: String): TestAttemptEntity? =
+        testDao.getLatestAttemptForTestSync(testId)
 
     fun getAttemptById(attemptId: String): Flow<TestAttemptEntity?> = testDao.getAttemptById(attemptId)
 
@@ -306,5 +311,80 @@ class PracticeTestRepository(
         }
         testDao.linkQuestionsToTest(refs)
         return testEntity
+    }
+
+    /**
+     * Retrieves or automatically synthesizes a Daily Test with valid questions.
+     * Guarantees tests for daily dates are populated with available questions.
+     */
+    suspend fun getOrCreateDailyTest(date: String): Pair<TestEntity, List<QuestionEntity>> {
+        val testId = "daily_$date"
+        val existingTest = testDao.getTestByIdSync(testId)
+        val existingQuestions = testDao.getQuestionsForTestSync(testId)
+
+        if (existingTest != null && existingQuestions.isNotEmpty()) {
+            return Pair(existingTest, existingQuestions)
+        }
+
+        // Try getting questions explicitly created for this date
+        var targetQuestions = testDao.getQuestionsForDateSync(date)
+        if (targetQuestions.isEmpty()) {
+            // Check all available questions across the database
+            val allQuestions = testDao.getAllQuestionsSync()
+            if (allQuestions.isNotEmpty()) {
+                targetQuestions = allQuestions.take(15)
+            }
+        }
+
+        if (targetQuestions.isNotEmpty()) {
+            val totalQ = targetQuestions.size
+            val createdTest = TestEntity(
+                id = testId,
+                date = date,
+                title = "Daily English Test - ${DateUtils.formatDate(date)}",
+                type = "daily",
+                durationMinutes = 15,
+                totalQuestions = totalQ,
+                instructions = "Timed 15-minute examination covering editorial vocabulary, contextual grammar, sentence corrections, and reading comprehension."
+            )
+            testDao.insertTest(createdTest)
+            val crossRefs = targetQuestions.mapIndexed { idx, q ->
+                TestQuestionCrossRef(testId = testId, questionId = q.id, orderIndex = idx)
+            }
+            testDao.linkQuestionsToTest(crossRefs)
+            return Pair(createdTest, targetQuestions)
+        }
+
+        val fallbackTest = existingTest ?: TestEntity(
+            id = testId,
+            date = date,
+            title = "Daily English Test - ${DateUtils.formatDate(date)}",
+            type = "daily",
+            durationMinutes = 15,
+            totalQuestions = 0,
+            instructions = "Timed examination"
+        )
+        return Pair(fallbackTest, emptyList())
+    }
+
+    /**
+     * Evaluates and permanently persists a Practice Questions attempt.
+     */
+    suspend fun submitPracticeAttempt(
+        date: String,
+        questions: List<QuestionEntity>,
+        userAnswers: Map<String, Int>
+    ): TestEvaluationResult {
+        val testId = "practice_$date"
+        val testTitle = "Daily Practice Questions - ${DateUtils.formatDate(date)}"
+        return submitTest(
+            testId = testId,
+            testTitle = testTitle,
+            date = date,
+            startedAt = System.currentTimeMillis() - 60000,
+            timeSpentSeconds = 60,
+            questions = questions,
+            userAnswers = userAnswers
+        )
     }
 }

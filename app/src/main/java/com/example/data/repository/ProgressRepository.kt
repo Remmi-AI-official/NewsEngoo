@@ -81,6 +81,17 @@ class ProgressRepository(
         )
     }
 
+    suspend fun updatePracticeProgress(date: String, answered: Int, total: Int) {
+        val existing = progressDao.getDailyProgressSync(date) ?: DailyProgressEntity(date = date)
+        progressDao.insertOrUpdateDailyProgress(
+            existing.copy(
+                practiceAnsweredCount = answered,
+                totalPracticeCount = total,
+                lastStudiedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
     suspend fun markTestCompleted(date: String, score: Int, maxScore: Int) {
         val existing = progressDao.getDailyProgressSync(date) ?: DailyProgressEntity(date = date)
         progressDao.insertOrUpdateDailyProgress(

@@ -21,6 +21,9 @@ interface VocabularyDao {
     @Query("SELECT * FROM vocabulary_words ORDER BY word ASC")
     fun getAllWords(): Flow<List<VocabularyEntity>>
 
+    @Query("SELECT * FROM vocabulary_words ORDER BY word ASC")
+    suspend fun getAllWordsSync(): List<VocabularyEntity>
+
     @Query("SELECT * FROM vocabulary_words WHERE id = :id LIMIT 1")
     fun getWordById(id: String): Flow<VocabularyEntity?>
 

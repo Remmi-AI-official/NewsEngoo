@@ -14,6 +14,9 @@ interface GrammarDao {
     @Query("SELECT * FROM grammar_rules ORDER BY date DESC, createdAt DESC")
     fun getAllRules(): Flow<List<GrammarRuleEntity>>
 
+    @Query("SELECT * FROM grammar_rules ORDER BY date DESC, createdAt DESC")
+    suspend fun getAllRulesSync(): List<GrammarRuleEntity>
+
     @Query("SELECT * FROM grammar_rules WHERE date = :date ORDER BY createdAt ASC")
     fun getRulesForDate(date: String): Flow<List<GrammarRuleEntity>>
 
@@ -58,6 +61,9 @@ interface GrammarDao {
 interface PhraseDao {
     @Query("SELECT * FROM phrases_expressions ORDER BY date DESC, createdAt DESC")
     fun getAllPhrases(): Flow<List<PhraseEntity>>
+
+    @Query("SELECT * FROM phrases_expressions ORDER BY date DESC, createdAt DESC")
+    suspend fun getAllPhrasesSync(): List<PhraseEntity>
 
     @Query("SELECT * FROM phrases_expressions WHERE date = :date ORDER BY createdAt ASC")
     fun getPhrasesForDate(date: String): Flow<List<PhraseEntity>>

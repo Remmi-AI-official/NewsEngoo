@@ -62,8 +62,14 @@ class TestViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadTest(testId: String) {
         viewModelScope.launch {
-            val test = testRepo.getTestByIdSync(testId)
-            val questions = testRepo.getQuestionsForTestSync(testId)
+            val (test, questions) = if (testId.startsWith("daily_")) {
+                val date = testId.removePrefix("daily_")
+                testRepo.getOrCreateDailyTest(date)
+            } else {
+                val t = testRepo.getTestByIdSync(testId)
+                val q = testRepo.getQuestionsForTestSync(testId)
+                Pair(t, q)
+            }
             val durationSec = (test?.durationMinutes ?: 15) * 60
             startedAt = System.currentTimeMillis()
 
@@ -93,7 +99,11 @@ class TestViewModel(application: Application) : AndroidViewModel(application) {
 
     fun submitActiveTest() {
         val state = _activeTestState.value
-        val test = state.test ?: return
+        val test = state.test
+        if (test == null || state.questions.isEmpty()) {
+            _activeTestState.value = state.copy(isSubmitted = true)
+            return
+        }
         viewModelScope.launch {
             val timeSpent = (System.currentTimeMillis() - startedAt).toInt() / 1000
             val eval = testRepo.submitTest(

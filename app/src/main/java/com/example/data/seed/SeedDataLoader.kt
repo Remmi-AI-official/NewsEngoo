@@ -29,7 +29,10 @@ object SeedDataLoader {
 
         // Check if already seeded
         val existingEditorial = editorialDao.getEditorialByDateSync("2026-10-04")
-        if (existingEditorial != null) return@withContext
+        if (existingEditorial != null) {
+            ensureTodayData(database)
+            return@withContext
+        }
 
         // 1. Categories
         val defaultCategories = listOf(
@@ -822,6 +825,8 @@ Ultimately, economic progress cannot be sustained through financial engineering 
         // 9. Also seed recent dates (2026-10-03 and 2026-10-02) for rich Calendar and Archive
         seedPreviousDay(database, "2026-10-03")
         seedPreviousDay(database, "2026-10-02")
+
+        ensureTodayData(database)
     }
 
     private suspend fun seedPreviousDay(database: AppDatabase, date: String) {
@@ -885,6 +890,104 @@ Technological self-reliance and policy coherence will dictate whether this trans
                 testScore = 9,
                 testMaxScore = 10,
                 isDayComplete = true
+            )
+        )
+    }
+
+    private suspend fun ensureTodayData(database: AppDatabase) {
+        val today = DateUtils.getTodayDate()
+        if (today == "2026-10-04") return
+
+        val editorialDao = database.editorialDao()
+        val existingToday = editorialDao.getEditorialByDateSync(today)
+        if (existingToday != null) return
+
+        val sourceEditorial = editorialDao.getEditorialByDateSync("2026-10-04") ?: return
+        val newEditorial = sourceEditorial.copy(
+            id = "ed_$today",
+            date = today,
+            isCompleted = false,
+            contentMarkdown = sourceEditorial.contentMarkdown.replace(
+                "Published: 04 October 2026",
+                "Published: ${DateUtils.formatDate(today)}"
+            )
+        )
+        editorialDao.insertEditorial(newEditorial)
+
+        val vocabDao = database.vocabularyDao()
+        val grammarDao = database.grammarDao()
+        val phraseDao = database.phraseDao()
+        val testDao = database.practiceTestDao()
+        val progressDao = database.dailyProgressDao()
+
+        // Link existing words to today's editorial and date
+        val allWords = vocabDao.getAllWordsSync()
+        for (w in allWords.take(18)) {
+            vocabDao.linkWordToEditorial(
+                EditorialVocabularyCrossRef(
+                    editorialId = "ed_$today",
+                    wordId = w.id,
+                    date = today
+                )
+            )
+        }
+
+        // Duplicate grammar rules with today's date
+        val allRules = grammarDao.getAllRulesSync()
+        val todayRules = allRules.take(4).map { r ->
+            r.copy(id = "rule_${today}_${r.id.substringAfterLast("_")}", date = today)
+        }
+        for (r in todayRules) {
+            grammarDao.insertRule(r)
+        }
+
+        // Duplicate phrases with today's date
+        val allPhrases = phraseDao.getAllPhrasesSync()
+        val todayPhrases = allPhrases.take(7).map { p ->
+            p.copy(id = "phrase_${today}_${p.id.substringAfterLast("_")}", date = today)
+        }
+        phraseDao.insertPhrases(todayPhrases)
+
+        // Duplicate questions with today's date and link to today's daily test
+        val allQuestions = testDao.getAllQuestionsSync()
+        val todayQuestions = allQuestions.take(15).mapIndexed { idx, q ->
+            q.copy(
+                id = "q_${today}_${idx + 1}",
+                date = today,
+                testId = "daily_$today"
+            )
+        }
+        testDao.insertQuestions(todayQuestions)
+
+        val dailyTest = TestEntity(
+            id = "daily_$today",
+            date = today,
+            title = "Daily English Test: ${DateUtils.formatDate(today)}",
+            type = "daily",
+            durationMinutes = 15,
+            totalQuestions = todayQuestions.size,
+            instructions = "15-question evaluation testing today's editorial vocabulary, grammar rules, expressions, and comprehension nuances."
+        )
+        testDao.insertTest(dailyTest)
+
+        val refs = todayQuestions.mapIndexed { idx, q ->
+            TestQuestionCrossRef(testId = "daily_$today", questionId = q.id, orderIndex = idx)
+        }
+        testDao.linkQuestionsToTest(refs)
+
+        progressDao.insertOrUpdateDailyProgress(
+            DailyProgressEntity(
+                date = today,
+                editorialRead = false,
+                vocabLearnedCount = 0,
+                totalVocabCount = allWords.take(18).size,
+                grammarStudiedCount = 0,
+                totalGrammarCount = todayRules.size,
+                expressionsLearnedCount = 0,
+                totalExpressionsCount = todayPhrases.size,
+                practiceAnsweredCount = 0,
+                totalPracticeCount = todayQuestions.size,
+                testTaken = false
             )
         )
     }
